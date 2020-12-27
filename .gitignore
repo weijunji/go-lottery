@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# secret config
+lottery_conf.yaml
+
+# coverage file
+coverage
+coverage.txt

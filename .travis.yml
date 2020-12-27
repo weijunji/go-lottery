@@ -1,0 +1,21 @@
+language: go
+go:
+  - 1.14.x
+  - 1.15.x
+  - master
+
+env:
+  - GO111MODULE=on
+
+before_install:
+  - openssl aes-256-cbc -K $encrypted_da6bace51577_key -iv $encrypted_da6bace51577_iv
+  -in lottery_conf.yaml.enc -out lottery_conf.yaml -d
+  - go mod download
+
+script:
+  - mv lottery_conf.yaml ~/lottery_conf.yaml
+  - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+  - go build cmd/auth/main.go
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
