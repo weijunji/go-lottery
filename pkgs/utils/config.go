@@ -22,12 +22,16 @@ func getConfigFile() []byte {
 	return file
 }
 
+var m map[interface{}]interface{} = nil
+
 // GetConfig get config in lottery_conf.yaml
 func GetConfig(namespace string) map[interface{}]interface{} {
-	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(getConfigFile(), &m)
-	if err != nil {
-		panic(err)
+	if m == nil {
+		m = make(map[interface{}]interface{})
+		err := yaml.Unmarshal(getConfigFile(), &m)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return m[namespace].(map[interface{}]interface{})
 }
