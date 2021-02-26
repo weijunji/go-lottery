@@ -3,7 +3,7 @@
 [![Build Status](https://www.travis-ci.com/weijunji/go-lottery.svg?branch=main)](https://www.travis-ci.com/weijunji/go-lottery)
 [![codecov](https://codecov.io/gh/weijunji/go-lottery/branch/main/graph/badge.svg?token=wLuLssUnbF)](https://codecov.io/gh/weijunji/go-lottery)
 
-Lottery
+点击上方的徽章查看代码CI结果以及测试覆盖率情况。
 
 ## 文件规范
 * `cmd/`保存程序的main包，只使用最少的代码，每个程序新建一个文件夹
