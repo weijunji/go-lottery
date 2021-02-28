@@ -38,13 +38,13 @@ type Lottery struct {
 }
 
 type lotteryReceived struct {
-	ID          uint64 `form:"id"`
-	Title       string `form:"title"`
-	Description string `form:"description"`
-	Permanent   uint64 `form:"permanent"`
-	Temporary   uint64 `form:"temporary"`
-	StartTime   string `form:"startTime"`
-	EndTime     string `form:"endTime"`
+	ID          uint64 `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Permanent   uint64 `json:"permanent"`
+	Temporary   uint64 `json:"temporary"`
+	StartTime   string `json:"startTime"`
+	EndTime     string `json:"endTime"`
 }
 
 //awardinfo struct
@@ -63,7 +63,8 @@ type AwardInfo struct {
 
 func addlottery(c *gin.Context) {
 	lotteryReceived := lotteryReceived{}
-	if c.ShouldBind(&lotteryReceived) != nil {
+	if c.ShouldBindJSON(&lotteryReceived) != nil {
+
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -73,8 +74,10 @@ func addlottery(c *gin.Context) {
 		Permanent:   lotteryReceived.Permanent,
 		Temporary:   lotteryReceived.Temporary,
 	}
+	fmt.Println(lotteryReceived)
 	//transform string to Time
 	loc, _ := time.LoadLocation("Local")
+	fmt.Println(lotteryReceived.StartTime)
 	if t, err := time.ParseInLocation(timeLayoutStr, lotteryReceived.StartTime, loc); err == nil {
 		lottery.StartTime = t
 	} else {
@@ -88,13 +91,17 @@ func addlottery(c *gin.Context) {
 		return
 	}
 	model := utils.GetMysql().Table("lotteries")
-	model.Create(&lottery)
+	err := model.Create(&lottery).Error
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"msg": "发布成功"})
 }
 
 func updatelottery(c *gin.Context) {
 	lotteryReceived := lotteryReceived{}
-	if c.ShouldBind(&lotteryReceived) != nil {
+	if c.ShouldBindJSON(&lotteryReceived) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -118,7 +125,11 @@ func updatelottery(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	utils.GetMysql().Model(&lottery).Updates(&lottery)
+	err := utils.GetMysql().Model(&lottery).Updates(&lottery).Error
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"msg": "修改成功"})
 }
 
@@ -127,12 +138,12 @@ func addawards(c *gin.Context) {
 		Id         uint64      `form:"id"`
 		AwardInfos []AwardInfo `form:"awards" json:"awards"`
 	}{}
-	if c.ShouldBind(&awards) != nil {
+	if c.ShouldBindJSON(&awards) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	for _, award := range awards.AwardInfos {
-		utils.GetMysql().Table("award_infos").Create(&AwardInfo{
+		err := utils.GetMysql().Table("award_infos").Create(&AwardInfo{
 			Lottery:     awards.Id,
 			Name:        award.Name,
 			Type:        award.Type,
@@ -142,7 +153,11 @@ func addawards(c *gin.Context) {
 			DisplayRate: award.DisplayRate,
 			Rate:        award.Rate,
 			Value:       award.Value,
-		})
+		}).Error
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"msg": "添加成功"})
 }
@@ -151,20 +166,28 @@ func deleteaward(c *gin.Context) {
 	id := struct {
 		Id uint64 `form:"id" json:"id"`
 	}{}
-	if c.ShouldBind(&id) != nil {
+	if c.ShouldBindJSON(&id) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	utils.GetMysql().Delete(&AwardInfo{}, id.Id)
+	err := utils.GetMysql().Delete(&AwardInfo{}, id.Id).Error
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"msg": "删除成功"})
 }
 
 func updateaward(c *gin.Context) {
 	award := AwardInfo{}
-	if c.ShouldBind(&award) != nil {
+	if c.ShouldBindJSON(&award) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	utils.GetMysql().Model(&award).Updates(&award)
-	fmt.Println(award)
+	err := utils.GetMysql().Model(&award).Updates(&award).Error
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	c.Status(http.StatusOK)
 }
