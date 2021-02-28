@@ -30,3 +30,21 @@ func LoginRequired() gin.HandlerFunc {
 		}
 	}
 }
+
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, _ := c.Get("userinfo")
+		if user.(Userinfo).Role == 1 {
+			c.AbortWithStatus(http.StatusForbidden)
+		}
+	}
+}
+
+func SuperAdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, _ := c.Get("userinfo")
+		if user.(Userinfo).Role != 2 {
+			c.AbortWithStatus(http.StatusForbidden)
+		}
+	}
+}

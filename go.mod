@@ -8,6 +8,7 @@ require (
 	github.com/go-redis/redis/v8 v8.4.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/qiniu/qmgo v0.9.1
+	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.6.1
 	go.mongodb.org/mongo-driver v1.4.4
 	gopkg.in/yaml.v2 v2.4.0
