@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -24,8 +23,6 @@ type LoginClaims struct {
 // Valid : implement jwt.Claims, check expire time
 func (claims LoginClaims) Valid() error {
 	if claims.StandardClaims.ExpiresAt < time.Now().Unix() {
-		fmt.Println(claims.StandardClaims.ExpiresAt)
-		fmt.Println(time.Now().Unix())
 		return errors.New("Token already expired")
 	}
 	return nil
@@ -34,7 +31,6 @@ func (claims LoginClaims) Valid() error {
 // GenerateToken : generate token with 3 days
 func GenerateToken(uid uint64, role uint64, expireDuration time.Duration) (string, error) {
 	expire := time.Now().Add(expireDuration)
-	fmt.Println(expire.Unix())
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, LoginClaims{
 		ID:   uid,
 		Role: role,

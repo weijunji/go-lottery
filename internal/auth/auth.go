@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/weijunji/go-lottery/pkgs/auth"
 	"github.com/weijunji/go-lottery/pkgs/middleware"
 	"io/ioutil"
 	"net/http"
@@ -25,13 +26,6 @@ type User struct {
 	Role        uint64 `gorm:"type:int;"`
 	CreatedAt   time.Time
 }
-
-// User role
-const (
-	RoleAdmin      uint64 = 0
-	RoleNormal     uint64 = 1
-	RoleSuperAdmin uint64 = 2
-)
 
 // Oauth type
 const (
@@ -89,7 +83,7 @@ func callback(c *gin.Context) {
 	db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"access_token"}),
-	}).Create(&User{ID: profile.ID, AccessToken: token, TokenType: OauthGithub, Role: RoleNormal})
+	}).Create(&User{ID: profile.ID, AccessToken: token, TokenType: OauthGithub, Role: auth.RoleNormal})
 	// get profile from db
 	user := User{ID: profile.ID}
 	if err := db.First(&user).Error; err != nil {
@@ -191,16 +185,16 @@ func deleteUser(c *gin.Context) {
 	info, _ := c.Get("userinfo")
 	db := utils.GetMysql()
 
-	if info.(middleware.Userinfo).Role == RoleAdmin {
+	if info.(middleware.Userinfo).Role == auth.RoleAdmin {
 		// admin can delete normal
-		if db.Where("role = ?", RoleNormal).Delete(&User{}, request.ID).RowsAffected == 0 {
+		if db.Where("role = ?", auth.RoleNormal).Delete(&User{}, request.ID).RowsAffected == 0 {
 			c.Status(http.StatusNotFound)
 		} else {
 			c.Status(http.StatusOK)
 		}
 	} else {
 		// super can delete all except super
-		if db.Where("role != ?", RoleSuperAdmin).Delete(&User{}, request.ID).RowsAffected == 0 {
+		if db.Where("role != ?", auth.RoleSuperAdmin).Delete(&User{}, request.ID).RowsAffected == 0 {
 			c.Status(http.StatusNotFound)
 		} else {
 			c.Status(http.StatusOK)
