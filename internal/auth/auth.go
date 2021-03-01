@@ -47,6 +47,9 @@ type Profile struct {
 
 // SetupRouter : set up auth router
 func SetupRouter(anonymousGroup *gin.RouterGroup, authGroup *gin.RouterGroup) {
+	if utils.GetMysql().AutoMigrate(&User{}) != nil {
+		log.Fatal("Auto migrate failed")
+	}
 	{
 		anonymousGroup.GET("/login", login)
 		anonymousGroup.GET("/callback", callback)
