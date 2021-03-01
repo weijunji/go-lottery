@@ -38,7 +38,7 @@ func GetConfig(namespace string) map[interface{}]interface{} {
 
 func getMysqlSource() string {
 	config := GetConfig("mysql")
-	if config["password"] == "" {
+	if config["password"].(string) == "" {
 		return fmt.Sprintf("%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 			config["user"],
 			config["host"],

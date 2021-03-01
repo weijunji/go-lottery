@@ -12,5 +12,5 @@ func TestConfigFile(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
-	assert.Equal(t, "lottery", GetConfig("mysql")["user"])
+	assert.NotEqual(t, 0, len(GetConfig("mysql")["user"].(string)))
 }
