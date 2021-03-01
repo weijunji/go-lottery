@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"github.com/weijunji/go-lottery/pkgs/auth"
 	"github.com/weijunji/go-lottery/pkgs/middleware"
 	"github.com/weijunji/go-lottery/pkgs/utils"
@@ -22,6 +23,9 @@ var superToken, _ = utils.GenerateToken(99998886, auth.RoleSuperAdmin, time.Minu
 func setup() {
 	gin.SetMode(gin.TestMode)
 	db := utils.GetMysql()
+	if db.AutoMigrate(&User{}) != nil {
+		log.Fatal("Auto migrate failed")
+	}
 	db.Create(&User{ID: 99999999, AccessToken: "test_test_test", TokenType: OauthGithub, Role: auth.RoleNormal})
 	db.Create(&User{ID: 99999998, AccessToken: "test_test_test", TokenType: OauthGithub, Role: auth.RoleNormal})
 	db.Create(&User{ID: 99999997, AccessToken: "test_test_test", TokenType: OauthGithub, Role: auth.RoleAdmin})
