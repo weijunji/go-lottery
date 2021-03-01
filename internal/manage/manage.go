@@ -1,19 +1,18 @@
 package manage
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const timeLayoutStr = "2006-01-02 15:04:05"
 
-func init() {
-	fmt.Print("make table....")
-	utils.GetMysql().AutoMigrate(&Lottery{}, &AwardInfo{})
-}
+//var ctx = utils.GetRedis().Context()
 
 //setup the management router
 func SetupManageRouter(group *gin.RouterGroup) {
@@ -23,17 +22,18 @@ func SetupManageRouter(group *gin.RouterGroup) {
 		group.POST("/addawards", addawards)
 		group.DELETE("/deleteaward", deleteaward)
 		group.POST("/updateaward", updateaward)
+		group.GET("/getawardinfolist", getawardinfolist)
 	}
 }
 
 //lottery info struct
 type Lottery struct {
 	ID          uint64    `gorm:"primary_key"`
-	Title       string    `gorm:"type:varchar(32)" form:"title"`
-	Description string    `gorm:"type:text" form:"description"`
-	Permanent   uint64    `gorm:"type:int" form:"permanent"`
-	Temporary   uint64    `gorm:"type:int" form:"temporary"`
-	StartTime   time.Time `form:"startTime"`
+	Title       string    `gorm:"type:varchar(32)" json:"title"`
+	Description string    `gorm:"type:text" json:"description"`
+	Permanent   uint64    `gorm:"type:int" json:"permanent"`
+	Temporary   uint64    `gorm:"type:int" json:"temporary"`
+	StartTime   time.Time `json:"startTime"`
 	EndTime     time.Time
 }
 
@@ -49,22 +49,30 @@ type lotteryReceived struct {
 
 //awardinfo struct
 type AwardInfo struct {
-	ID          uint64 `gorm:"primary_key" form:"id"`
-	Lottery     uint64 `gorm:"type:int" form:"lottery"`
-	Name        string `gorm:"type:varchar(32)" form:"name"`
-	Type        uint64 `gorm:"type:int" form:"type"`
-	Description string `gorm:"type:text" form:"description"`
-	Pic         string `gorm:"type:text" form:"pic"`
-	Total       uint64 `gorm:"type:int" form:"total"`
-	DisplayRate uint64 `gorm:"type:int" form:"displayRate"`
-	Rate        uint64 `gorm:"type:int" form:"rate"`
-	Value       uint64 `gorm:"type:int" form:"value"`
+	ID          uint64 `gorm:"primary_key" json:"id"`
+	Lottery     uint64 `gorm:"type:int" json:"lottery"`
+	Name        string `gorm:"type:varchar(32)" json:"name"`
+	Type        uint64 `gorm:"type:int" json:"type"`
+	Description string `gorm:"type:text" json:"description"`
+	Pic         string `gorm:"type:text" json:"pic"`
+	Total       uint64 `gorm:"type:int" json:"total"`
+	DisplayRate uint64 `gorm:"type:int" json:"displayRate"`
+	Rate        uint64 `gorm:"type:int" json:"rate"`
+	Value       uint64 `gorm:"type:int" json:"value"`
+}
+
+type WinningInfo struct {
+	ID      uint64 `gorm:"primary_key"`
+	User    uint64 `gorm:"type:int"`
+	Award   uint64 `gorm:"type:int"`
+	Lottery uint64 `gorm:"type:int"`
+	Address string `gorm:"type:tinytext"`
+	Handout bool   `gorm:"type:tinyint(1)"`
 }
 
 func addlottery(c *gin.Context) {
 	lotteryReceived := lotteryReceived{}
 	if c.ShouldBindJSON(&lotteryReceived) != nil {
-
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -77,7 +85,6 @@ func addlottery(c *gin.Context) {
 	fmt.Println(lotteryReceived)
 	//transform string to Time
 	loc, _ := time.LoadLocation("Local")
-	fmt.Println(lotteryReceived.StartTime)
 	if t, err := time.ParseInLocation(timeLayoutStr, lotteryReceived.StartTime, loc); err == nil {
 		lottery.StartTime = t
 	} else {
@@ -90,8 +97,7 @@ func addlottery(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	model := utils.GetMysql().Table("lotteries")
-	err := model.Create(&lottery).Error
+	err := utils.GetMysql().Table("lotteries").Create(&lottery).Error
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return
@@ -125,8 +131,7 @@ func updatelottery(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	err := utils.GetMysql().Model(&lottery).Updates(&lottery).Error
-	if err != nil {
+	if utils.GetMysql().Model(&lottery).Updates(&lottery).Error != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -142,8 +147,9 @@ func addawards(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+	tx := utils.GetMysql().Table("award_infos").Begin()
 	for _, award := range awards.AwardInfos {
-		err := utils.GetMysql().Table("award_infos").Create(&AwardInfo{
+		err := tx.Create(&AwardInfo{
 			Lottery:     awards.Id,
 			Name:        award.Name,
 			Type:        award.Type,
@@ -155,26 +161,32 @@ func addawards(c *gin.Context) {
 			Value:       award.Value,
 		}).Error
 		if err != nil {
+			tx.Rollback()
 			c.Status(http.StatusBadRequest)
 			return
 		}
 	}
+	tx.Commit()
 	c.JSON(http.StatusOK, gin.H{"msg": "添加成功"})
 }
 
 func deleteaward(c *gin.Context) {
-	id := struct {
-		Id uint64 `form:"id" json:"id"`
+	requestData := struct {
+		Id        uint64 `form:"id" json:"award"`
+		LotteryID uint64 `json:"lottery"`
 	}{}
-	if c.ShouldBindJSON(&id) != nil {
+	if c.ShouldBindJSON(&requestData) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	err := utils.GetMysql().Delete(&AwardInfo{}, id.Id).Error
-	if err != nil {
-		c.Status(http.StatusBadRequest)
+	if utils.GetMysql().Delete(&AwardInfo{}, requestData.Id).RowsAffected == 0 {
+		c.Status(http.StatusNotFound)
 		return
 	}
+	//Invalidate the probability of prizes and the number of low-value prizes in redis
+	//utils.GetRedis().Del(ctx,fmt.Sprintf("rate:%d",requestData.Id)).Err()
+	//utils.GetRedis().SRem(ctx,fmt.Sprintf("lottery:%d",requestData.LotteryID),requestData.LotteryID).Err()
+	//utils.GetRedis().Del(ctx,fmt.Sprintf("awards:%d",requestData.Id))
 	c.JSON(http.StatusOK, gin.H{"msg": "删除成功"})
 }
 
@@ -189,5 +201,60 @@ func updateaward(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+	//Invalidate the probability of prizes and the number of low-value prizes in redis
+	//utils.GetRedis().Del(ctx,fmt.Sprintf("rate:%d",award.ID)).Err()
+	//utils.GetRedis().Del(ctx,fmt.Sprintf("awards:%d",award.ID))
 	c.Status(http.StatusOK)
+}
+
+func getawardinfolist(c *gin.Context) {
+	//struct for requestData
+	requestData := struct {
+		Id   uint64 `json:"id"`
+		Page uint64 `json:"page"`
+		Rows uint64 `json:"rows"`
+	}{}
+	if c.ShouldBindJSON(&requestData) != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	//the number of total records
+	var count int64
+	err1 := utils.GetMysql().Model(&WinningInfo{}).Where("lottery=?", requestData.Id).Count(&count).Error
+	if err1 != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	rows, err2 := utils.GetMysql().Model(&AwardInfo{}).Raw("SELECT t1.user,t2.name from (SELECT user, award  FROM winning_infos WHERE lottery = ?) as t1 inner join award_infos as t2 on t1.award=t2.id order by t2.value desc limit ?,?", requestData.Id, (requestData.Page-1)*requestData.Rows, requestData.Rows).Rows()
+	if rows != nil {
+		defer rows.Close().Error()
+	}
+	if err2 != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	user := struct {
+		User uint64 `json:"user"`
+		Name string `json:"award"`
+	}{}
+
+	var responseData strings.Builder
+	responseData.WriteString(fmt.Sprintf(`{"id":%d,"result:[`, requestData.Id))
+
+	num := 0
+	for rows.Next() {
+		num++
+		if num != 1 {
+			responseData.WriteString(",")
+		}
+		// ScanRows 将一行扫描至 user
+		if utils.GetMysql().ScanRows(rows, &user) != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		temp, _ := json.Marshal(user)
+		responseData.Write(temp)
+	}
+	responseData.WriteString(fmt.Sprintf(`],"page":%d,"rows":%d,"total":%d}`, requestData.Page, num, count))
+	c.String(http.StatusOK, responseData.String())
 }
