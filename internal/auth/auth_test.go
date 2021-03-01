@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var normalToken, _ = utils.GenerateToken(99998888, RoleNormal, time.Second*10)
-var adminToken, _ = utils.GenerateToken(99998887, RoleAdmin, time.Second*10)
-var superToken, _ = utils.GenerateToken(99998886, RoleSuperAdmin, time.Second*10)
+var normalToken, _ = utils.GenerateToken(99998888, RoleNormal, time.Minute*10)
+var adminToken, _ = utils.GenerateToken(99998887, RoleAdmin, time.Minute*10)
+var superToken, _ = utils.GenerateToken(99998886, RoleSuperAdmin, time.Minute*10)
 
 func setup() {
 	gin.SetMode(gin.TestMode)
