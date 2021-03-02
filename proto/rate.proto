@@ -1,0 +1,15 @@
+syntax = "proto3";
+package lottery;
+
+option go_package = "/proto";
+
+message LotteryRates {
+  uint32 total = 1;
+
+  message AwardRate {
+    uint64 id = 1;
+    uint32 rate = 2;
+  }
+
+  repeated AwardRate rates = 2;
+}
