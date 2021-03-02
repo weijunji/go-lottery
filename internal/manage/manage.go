@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/golang/protobuf/proto"
 	"github.com/weijunji/go-lottery/pkgs/utils"
+	myproto "github.com/weijunji/go-lottery/proto"
 	"net/http"
 	"strings"
 	"time"
@@ -12,10 +14,11 @@ import (
 
 const timeLayoutStr = "2006-01-02 15:04:05"
 
-//var ctx = utils.GetRedis().Context()
+var ctx = utils.GetRedis().Context()
 
 //setup the management router
 func SetupManageRouter(group *gin.RouterGroup) {
+
 	{
 		group.POST("/addlottery", addlottery)
 		group.POST("/updatelottery", updatelottery)
@@ -61,6 +64,7 @@ type AwardInfo struct {
 	Value       uint64 `gorm:"type:int" json:"value"`
 }
 
+//winninginfo struct
 type WinningInfo struct {
 	ID      uint64 `gorm:"primary_key"`
 	User    uint64 `gorm:"type:int"`
@@ -68,6 +72,13 @@ type WinningInfo struct {
 	Lottery uint64 `gorm:"type:int"`
 	Address string `gorm:"type:tinytext"`
 	Handout bool   `gorm:"type:tinyint(1)"`
+}
+
+//struct for high val
+type Award struct {
+	Award   uint64 `gorm:"primary_key; type:int"`
+	Lottery uint64 `gorm:"type:int"`
+	Reamin  uint64 `gorm:"type:int"`
 }
 
 func addlottery(c *gin.Context) {
@@ -82,7 +93,6 @@ func addlottery(c *gin.Context) {
 		Permanent:   lotteryReceived.Permanent,
 		Temporary:   lotteryReceived.Temporary,
 	}
-	fmt.Println(lotteryReceived)
 	//transform string to Time
 	loc, _ := time.LoadLocation("Local")
 	if t, err := time.ParseInLocation(timeLayoutStr, lotteryReceived.StartTime, loc); err == nil {
@@ -102,6 +112,16 @@ func addlottery(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+	rate := &myproto.LotteryRates{
+		Total: 0,
+		Rates: []*myproto.LotteryRates_AwardRate{},
+	}
+	rateProto, err := proto.Marshal(rate)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", lottery.ID), string(rateProto), 0)
 	c.JSON(http.StatusOK, gin.H{"msg": "发布成功"})
 }
 
@@ -140,7 +160,7 @@ func updatelottery(c *gin.Context) {
 
 func addawards(c *gin.Context) {
 	awards := struct {
-		Id         uint64      `form:"id"`
+		Id         uint64      `form:"id"` //lotteryid
 		AwardInfos []AwardInfo `form:"awards" json:"awards"`
 	}{}
 	if c.ShouldBindJSON(&awards) != nil {
@@ -148,18 +168,9 @@ func addawards(c *gin.Context) {
 		return
 	}
 	tx := utils.GetMysql().Table("award_infos").Begin()
-	for _, award := range awards.AwardInfos {
-		err := tx.Create(&AwardInfo{
-			Lottery:     awards.Id,
-			Name:        award.Name,
-			Type:        award.Type,
-			Description: award.Description,
-			Pic:         award.Pic,
-			Total:       award.Total,
-			DisplayRate: award.DisplayRate,
-			Rate:        award.Rate,
-			Value:       award.Value,
-		}).Error
+	for i, _ := range awards.AwardInfos {
+		awards.AwardInfos[i].Lottery = awards.Id
+		err := tx.Create(&awards.AwardInfos[i]).Error
 		if err != nil {
 			tx.Rollback()
 			c.Status(http.StatusBadRequest)
@@ -167,6 +178,31 @@ func addawards(c *gin.Context) {
 		}
 	}
 	tx.Commit()
+	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", awards.Id)).Val()
+	rate := &myproto.LotteryRates{}
+	if proto.Unmarshal([]byte(val), rate) != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	for _, award := range awards.AwardInfos {
+		rate.Total++
+		rate.Rates = append(rate.Rates, &myproto.LotteryRates_AwardRate{
+			Id:   award.ID,
+			Rate: uint32(award.Rate),
+		})
+		//low value award,set the rest of award in redis
+		if award.Value < 20000 {
+			utils.GetRedis().Set(ctx, fmt.Sprintf("awards:%d", award.ID), award.Total, 0)
+		} else {
+			utils.GetMysql().Table("awards").Create(Award{
+				Award:   award.ID,
+				Lottery: award.Lottery,
+				Reamin:  award.Total,
+			})
+		}
+	}
+	rateProto, _ := proto.Marshal(rate)
+	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", awards.Id), string(rateProto), 0)
 	c.JSON(http.StatusOK, gin.H{"msg": "添加成功"})
 }
 
@@ -183,10 +219,20 @@ func deleteaward(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	//Invalidate the probability of prizes and the number of low-value prizes in redis
-	//utils.GetRedis().Del(ctx,fmt.Sprintf("rate:%d",requestData.Id)).Err()
-	//utils.GetRedis().SRem(ctx,fmt.Sprintf("lottery:%d",requestData.LotteryID),requestData.LotteryID).Err()
-	//utils.GetRedis().Del(ctx,fmt.Sprintf("awards:%d",requestData.Id))
+	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", requestData.LotteryID)).Val()
+	rate := &myproto.LotteryRates{}
+	if proto.Unmarshal([]byte(val), rate) != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	for i, v := range rate.Rates {
+		if v.Id == requestData.Id {
+			rate.Total--
+			rate.Rates = append(rate.Rates[:i], rate.Rates[i+1:]...)
+		}
+	}
+	rateProto, _ := proto.Marshal(rate)
+	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", requestData.LotteryID), string(rateProto), 0)
 	c.JSON(http.StatusOK, gin.H{"msg": "删除成功"})
 }
 
@@ -196,14 +242,24 @@ func updateaward(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	err := utils.GetMysql().Model(&award).Updates(&award).Error
+	err := utils.GetMysql().Model(&award).Updates(map[string]interface{}{"rate": award.Rate}).Error
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	//Invalidate the probability of prizes and the number of low-value prizes in redis
-	//utils.GetRedis().Del(ctx,fmt.Sprintf("rate:%d",award.ID)).Err()
-	//utils.GetRedis().Del(ctx,fmt.Sprintf("awards:%d",award.ID))
+	rate := &myproto.LotteryRates{}
+	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", award.Lottery)).Val()
+	if proto.Unmarshal([]byte(val), rate) != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	for i, _ := range rate.Rates {
+		if rate.Rates[i].Id == award.ID {
+			rate.Rates[i].Rate = uint32(award.Rate)
+		}
+	}
+	rateProto, _ := proto.Marshal(rate)
+	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", award.Lottery), string(rateProto), 0)
 	c.Status(http.StatusOK)
 }
 
@@ -226,9 +282,7 @@ func getawardinfolist(c *gin.Context) {
 		return
 	}
 	rows, err2 := utils.GetMysql().Model(&AwardInfo{}).Raw("SELECT t1.user,t2.name from (SELECT user, award  FROM winning_infos WHERE lottery = ?) as t1 inner join award_infos as t2 on t1.award=t2.id order by t2.value desc limit ?,?", requestData.Id, (requestData.Page-1)*requestData.Rows, requestData.Rows).Rows()
-	if rows != nil {
-		defer rows.Close().Error()
-	}
+	defer rows.Close()
 	if err2 != nil {
 		c.Status(http.StatusBadRequest)
 		return
@@ -242,7 +296,9 @@ func getawardinfolist(c *gin.Context) {
 	responseData.WriteString(fmt.Sprintf(`{"id":%d,"result:[`, requestData.Id))
 
 	num := 0
+
 	for rows.Next() {
+
 		num++
 		if num != 1 {
 			responseData.WriteString(",")
