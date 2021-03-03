@@ -15,7 +15,16 @@ const timeLayoutStr = "2006-01-02 15:04:05"
 var ctx = utils.GetRedis().Context()
 
 func init() {
-	utils.GetMysql().AutoMigrate(&Lottery{}, &AwardInfo{}, &AwardInfo{}, &WinningInfo{}, &Award{})
+	utils.GetMysql().AutoMigrate(&User{}, &Lottery{}, &AwardInfo{}, &AwardInfo{}, &WinningInfo{}, &Award{})
+}
+
+/// User : struct for user
+type User struct {
+	ID          uint64 `gorm:"primaryKey;"`
+	AccessToken string `gorm:"type:varchar(128);" json:"-"`
+	TokenType   uint64 `gorm:"type:int;" json:"-"`
+	Role        uint64 `gorm:"type:int;"`
+	CreatedAt   time.Time
 }
 
 //setup the management router
@@ -51,36 +60,55 @@ type lotteryReceived struct {
 	StartTime   string `json:"startTime"`
 	EndTime     string `json:"endTime"`
 }
+type Test struct {
+	ID          uint64  `gorm:"primary_key" json:"id"`
+	Lottery     uint64  `gorm:"type:int unsigned" json:"lottery"`
+	Name        string  `gorm:"type:varchar(32)" json:"name"`
+	Type        uint64  `gorm:"type:int" json:"type"`
+	Description string  `gorm:"type:text" json:"description"`
+	Pic         string  `gorm:"type:text" json:"pic"`
+	Total       uint64  `gorm:"type:int" json:"total"`
+	DisplayRate uint64  `gorm:"type:int" json:"displayRate"`
+	Rate        uint64  `gorm:"type:int" json:"rate"`
+	Value       uint64  `gorm:"type:int" json:"value"`
+	Fkey        Lottery `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+}
 
 //awardinfo struct
 type AwardInfo struct {
-	ID          uint64 `gorm:"primary_key" json:"id"`
-	Lottery     uint64 `gorm:"type:int" json:"lottery"`
-	Name        string `gorm:"type:varchar(32)" json:"name"`
-	Type        uint64 `gorm:"type:int" json:"type"`
-	Description string `gorm:"type:text" json:"description"`
-	Pic         string `gorm:"type:text" json:"pic"`
-	Total       uint64 `gorm:"type:int" json:"total"`
-	DisplayRate uint64 `gorm:"type:int" json:"displayRate"`
-	Rate        uint64 `gorm:"type:int" json:"rate"`
-	Value       uint64 `gorm:"type:int" json:"value"`
+	ID          uint64  `gorm:"primary_key" json:"id"`
+	Lottery     uint64  `gorm:"type:int unsigned" json:"lottery"`
+	Name        string  `gorm:"type:varchar(32)" json:"name"`
+	Type        uint64  `gorm:"type:int" json:"type"`
+	Description string  `gorm:"type:text" json:"description"`
+	Pic         string  `gorm:"type:text" json:"pic"`
+	Total       uint64  `gorm:"type:int" json:"total"`
+	DisplayRate uint64  `gorm:"type:int" json:"displayRate"`
+	Rate        uint64  `gorm:"type:int" json:"rate"`
+	Value       uint64  `gorm:"type:int" json:"value"`
+	Fkey        Lottery `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 //winninginfo struct
 type WinningInfo struct {
-	ID      uint64 `gorm:"primary_key"`
-	User    uint64 `gorm:"type:int"`
-	Award   uint64 `gorm:"type:int"`
-	Lottery uint64 `gorm:"type:int"`
-	Address string `gorm:"type:tinytext"`
-	Handout bool   `gorm:"type:tinyint(1)"`
+	ID      uint64    `gorm:"primary_key"`
+	User    uint64    `gorm:"type:int unsigned;index"`
+	Award   uint64    `gorm:"type:int unsigned;index"`
+	Lottery uint64    `gorm:"type:int unsigned;index"`
+	Address string    `gorm:"type:tinytext"`
+	Handout bool      `gorm:"type:tinyint(1)"`
+	Fkey1   User      `gorm:"foreignkey:User;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey2   AwardInfo `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey3   Lottery   `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 //struct for high val
 type Award struct {
-	Award   uint64 `gorm:"primary_key; type:int"`
-	Lottery uint64 `gorm:"type:int"`
-	Reamin  uint64 `gorm:"type:int"`
+	Award   uint64    `gorm:"primary_key; type:int unsigned"`
+	Lottery uint64    `gorm:"type:int unsigned; index"`
+	Reamin  uint64    `gorm:"type:int"`
+	Fkey1   Lottery   `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey2   AwardInfo `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func addlottery(c *gin.Context) {
