@@ -22,18 +22,30 @@ func getConfigFile() []byte {
 	return file
 }
 
+var m map[interface{}]interface{} = nil
+
 // GetConfig get config in lottery_conf.yaml
 func GetConfig(namespace string) map[interface{}]interface{} {
-	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(getConfigFile(), &m)
-	if err != nil {
-		panic(err)
+	if m == nil {
+		m = make(map[interface{}]interface{})
+		err := yaml.Unmarshal(getConfigFile(), &m)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return m[namespace].(map[interface{}]interface{})
 }
 
 func getMysqlSource() string {
 	config := GetConfig("mysql")
+	if config["password"] == nil {
+		return fmt.Sprintf("%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			config["user"],
+			config["host"],
+			config["port"],
+			config["database"],
+		)
+	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		config["user"],
 		config["password"],
