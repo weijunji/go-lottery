@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/golang/protobuf/proto"
 	"github.com/weijunji/go-lottery/pkgs/utils"
-	myproto "github.com/weijunji/go-lottery/proto"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +13,10 @@ import (
 const timeLayoutStr = "2006-01-02 15:04:05"
 
 var ctx = utils.GetRedis().Context()
+
+func init() {
+	utils.GetMysql().AutoMigrate(&Lottery{}, &AwardInfo{}, &AwardInfo{}, &WinningInfo{})
+}
 
 //setup the management router
 func SetupManageRouter(group *gin.RouterGroup) {
@@ -112,16 +114,6 @@ func addlottery(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	rate := &myproto.LotteryRates{
-		Total: 0,
-		Rates: []*myproto.LotteryRates_AwardRate{},
-	}
-	rateProto, err := proto.Marshal(rate)
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", lottery.ID), string(rateProto), 0)
 	c.JSON(http.StatusOK, gin.H{"msg": "发布成功"})
 }
 
@@ -167,10 +159,24 @@ func addawards(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	tx := utils.GetMysql().Table("award_infos").Begin()
+	tx := utils.GetMysql().Begin()
 	for i, _ := range awards.AwardInfos {
 		awards.AwardInfos[i].Lottery = awards.Id
-		err := tx.Create(&awards.AwardInfos[i]).Error
+		err := tx.Table("award_infos").Create(&awards.AwardInfos[i]).Error
+		//low value award,set the rest of award in redis
+		if awards.AwardInfos[i].Value < 20000 {
+			utils.GetRedis().Set(ctx, fmt.Sprintf("awards:%d", awards.AwardInfos[i].ID), awards.AwardInfos[i].Total, 0)
+		} else {
+			if tx.Table("awards").Create(Award{
+				Award:   awards.AwardInfos[i].ID,
+				Lottery: awards.AwardInfos[i].Lottery,
+				Reamin:  awards.AwardInfos[i].Total,
+			}).Error != nil {
+				tx.Rollback()
+				c.Status(http.StatusBadRequest)
+				return
+			}
+		}
 		if err != nil {
 			tx.Rollback()
 			c.Status(http.StatusBadRequest)
@@ -178,31 +184,7 @@ func addawards(c *gin.Context) {
 		}
 	}
 	tx.Commit()
-	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", awards.Id)).Val()
-	rate := &myproto.LotteryRates{}
-	if proto.Unmarshal([]byte(val), rate) != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	for _, award := range awards.AwardInfos {
-		rate.Total++
-		rate.Rates = append(rate.Rates, &myproto.LotteryRates_AwardRate{
-			Id:   award.ID,
-			Rate: uint32(award.Rate),
-		})
-		//low value award,set the rest of award in redis
-		if award.Value < 20000 {
-			utils.GetRedis().Set(ctx, fmt.Sprintf("awards:%d", award.ID), award.Total, 0)
-		} else {
-			utils.GetMysql().Table("awards").Create(Award{
-				Award:   award.ID,
-				Lottery: award.Lottery,
-				Reamin:  award.Total,
-			})
-		}
-	}
-	rateProto, _ := proto.Marshal(rate)
-	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", awards.Id), string(rateProto), 0)
+	utils.GetRedis().Del(ctx, fmt.Sprintf("rate:%d", awards.Id))
 	c.JSON(http.StatusOK, gin.H{"msg": "添加成功"})
 }
 
@@ -219,20 +201,8 @@ func deleteaward(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", requestData.LotteryID)).Val()
-	rate := &myproto.LotteryRates{}
-	if proto.Unmarshal([]byte(val), rate) != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	for i, v := range rate.Rates {
-		if v.Id == requestData.Id {
-			rate.Total--
-			rate.Rates = append(rate.Rates[:i], rate.Rates[i+1:]...)
-		}
-	}
-	rateProto, _ := proto.Marshal(rate)
-	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", requestData.LotteryID), string(rateProto), 0)
+	utils.GetRedis().Del(ctx, fmt.Sprintf("rate:%d", requestData.LotteryID))
+	utils.GetRedis().Del(ctx, fmt.Sprintf("awards:%d", requestData.Id))
 	c.JSON(http.StatusOK, gin.H{"msg": "删除成功"})
 }
 
@@ -247,19 +217,7 @@ func updateaward(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	rate := &myproto.LotteryRates{}
-	val := utils.GetRedis().Get(ctx, fmt.Sprintf("rate:%d", award.Lottery)).Val()
-	if proto.Unmarshal([]byte(val), rate) != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	for i, _ := range rate.Rates {
-		if rate.Rates[i].Id == award.ID {
-			rate.Rates[i].Rate = uint32(award.Rate)
-		}
-	}
-	rateProto, _ := proto.Marshal(rate)
-	utils.GetRedis().Set(ctx, fmt.Sprintf("rate:%d", award.Lottery), string(rateProto), 0)
+	utils.GetRedis().Del(ctx, fmt.Sprintf("rate:%d", award.Lottery))
 	c.Status(http.StatusOK)
 }
 
