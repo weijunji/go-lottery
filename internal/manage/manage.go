@@ -1,12 +1,10 @@
 package manage
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -43,7 +41,7 @@ func SetupManageRouter(group *gin.RouterGroup) {
 //lottery info struct
 type Lottery struct {
 	ID          uint64    `gorm:"primary_key"`
-	Title       string    `gorm:"type:varchar(32)" json:"title"`
+	Title       string    `gorm:"type:varchar(32); not null" json:"title"`
 	Description string    `gorm:"type:text" json:"description"`
 	Permanent   uint64    `gorm:"type:int" json:"permanent"`
 	Temporary   uint64    `gorm:"type:int" json:"temporary"`
@@ -60,24 +58,11 @@ type lotteryReceived struct {
 	StartTime   string `json:"startTime"`
 	EndTime     string `json:"endTime"`
 }
-type Test struct {
-	ID          uint64  `gorm:"primary_key" json:"id"`
-	Lottery     uint64  `gorm:"type:int unsigned" json:"lottery"`
-	Name        string  `gorm:"type:varchar(32)" json:"name"`
-	Type        uint64  `gorm:"type:int" json:"type"`
-	Description string  `gorm:"type:text" json:"description"`
-	Pic         string  `gorm:"type:text" json:"pic"`
-	Total       uint64  `gorm:"type:int" json:"total"`
-	DisplayRate uint64  `gorm:"type:int" json:"displayRate"`
-	Rate        uint64  `gorm:"type:int" json:"rate"`
-	Value       uint64  `gorm:"type:int" json:"value"`
-	Fkey        Lottery `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-}
 
 //awardinfo struct
 type AwardInfo struct {
 	ID          uint64  `gorm:"primary_key" json:"id"`
-	Lottery     uint64  `gorm:"type:int unsigned" json:"lottery"`
+	Lottery     uint64  `gorm:"type:int unsigned;not null" json:"lottery"`
 	Name        string  `gorm:"type:varchar(32)" json:"name"`
 	Type        uint64  `gorm:"type:int" json:"type"`
 	Description string  `gorm:"type:text" json:"description"`
@@ -92,11 +77,11 @@ type AwardInfo struct {
 //winninginfo struct
 type WinningInfo struct {
 	ID      uint64    `gorm:"primary_key"`
-	User    uint64    `gorm:"type:int unsigned;index"`
-	Award   uint64    `gorm:"type:int unsigned;index"`
-	Lottery uint64    `gorm:"type:int unsigned;index"`
+	User    uint64    `gorm:"type:int unsigned;index;not null"`
+	Award   uint64    `gorm:"type:int unsigned;index;not null"`
+	Lottery uint64    `gorm:"type:int unsigned;index;not null"`
 	Address string    `gorm:"type:tinytext"`
-	Handout bool      `gorm:"type:tinyint(1)"`
+	Handout bool      `gorm:"type:tinyint(1);default:0"`
 	Fkey1   User      `gorm:"foreignkey:User;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Fkey2   AwardInfo `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Fkey3   Lottery   `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -105,7 +90,7 @@ type WinningInfo struct {
 //struct for high val
 type Award struct {
 	Award   uint64    `gorm:"primary_key; type:int unsigned"`
-	Lottery uint64    `gorm:"type:int unsigned; index"`
+	Lottery uint64    `gorm:"type:int unsigned; index;not null"`
 	Reamin  uint64    `gorm:"type:int"`
 	Fkey1   Lottery   `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Fkey2   AwardInfo `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -273,30 +258,34 @@ func getawardinfolist(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	user := struct {
+	type user struct {
 		User uint64 `json:"user"`
 		Name string `json:"award"`
-	}{}
-
-	var responseData strings.Builder
-	responseData.WriteString(fmt.Sprintf(`{"id":%d,"result:[`, requestData.Id))
-
-	num := 0
-
+	}
+	users := make([]user, 0, requestData.Rows)
+	var num uint64 = 0
+	type responseData struct {
+		Id     uint64 `json:"id"`
+		Result []user `json:"result"`
+		Page   uint64 `json:"page"`
+		Rows   uint64 `json:"rows"`
+		Total  uint64 `json:"total"`
+	}
 	for rows.Next() {
-
-		num++
-		if num != 1 {
-			responseData.WriteString(",")
-		}
+		u := user{}
 		// ScanRows 将一行扫描至 user
-		if utils.GetMysql().ScanRows(rows, &user) != nil {
+		if utils.GetMysql().ScanRows(rows, &u) != nil {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-		temp, _ := json.Marshal(user)
-		responseData.Write(temp)
+		users = append(users, u)
+		num++
 	}
-	responseData.WriteString(fmt.Sprintf(`],"page":%d,"rows":%d,"total":%d}`, requestData.Page, num, count))
-	c.String(http.StatusOK, responseData.String())
+	c.JSON(http.StatusOK, responseData{
+		Id:     requestData.Id,
+		Result: users,
+		Page:   requestData.Page,
+		Rows:   num,
+		Total:  uint64(count),
+	})
 }
