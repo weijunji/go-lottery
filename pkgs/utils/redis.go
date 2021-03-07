@@ -9,7 +9,7 @@ import (
 var rdb *redis.Client
 var redis_once sync.Once
 
-// GetDB : return databast instance
+// GetDB : return database instance
 func GetRedis() *redis.Client {
 	redis_once.Do(func() {
 		rdb = redis.NewClient(getRedisOption())
