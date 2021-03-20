@@ -36,8 +36,8 @@ func LoadRouter(r *gin.RouterGroup) {
 type Users struct {
 	ID          uint64    `gorm:"primaryKey;column:id;type:bigint unsigned;not null" json:"-"`
 	AccessToken string    `gorm:"column:access_token;type:varchar(128)" json:"-"`
-	TokenType   int64     `gorm:"column:token_type;type:bigint" json:"-"`
-	Role        int64     `gorm:"column:role;type:bigint" json:"role"`
+	TokenType   uint64     `gorm:"column:token_type;type:bigint" json:"-"`
+	Role        uint64     `gorm:"column:role;type:bigint" json:"role"`
 	CreatedAt   time.Time `gorm:"column:created_at;type:datetime(3)" json:"created_at"`
 }
 // TableName get sql table name.
@@ -63,7 +63,7 @@ func (m *Lotteries) TableName() string {
 type AwardInfos struct {
 	ID          uint64    `gorm:"primaryKey;column:id;type:bigint unsigned;not null" json:"-"`
 	Lottery     uint64    `gorm:"column:lottery;type:bigint unsigned;not null" json:"lottery"`
-	Lotteries   Lotteries `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey   		Lotteries `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Name        string    `gorm:"column:name;type:varchar(32)" json:"name"`
 	Type        int64     `gorm:"column:type;type:bigint" json:"type"`
 	Description string    `gorm:"column:description;type:text" json:"description"`
@@ -80,9 +80,9 @@ func (m *AwardInfos) TableName() string {
 // Awards [...]
 type Awards struct {
 	Award      uint64     `gorm:"primaryKey;column:award;type:bigint unsigned;not null" json:"-"`
-	AwardInfos AwardInfos `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey2 	   AwardInfos `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Lottery    uint64     `gorm:"index:idx_awards_lottery;column:lottery;type:bigint unsigned" json:"lottery"`
-	Lotteries  Lotteries  `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey1  	   Lotteries  `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Reamin     int64      `gorm:"column:reamin;type:bigint" json:"reamin"`
 }
 // TableName get sql table name.
@@ -94,11 +94,11 @@ func (m *Awards) TableName() string {
 type WinningInfos struct {
 	ID         uint64     `gorm:"primaryKey;column:id;type:bigint unsigned;not null" json:"-"`
 	User       uint64     `gorm:"index:idx_winning_infos_user;column:user;type:bigint unsigned" json:"user"`
-	Users      Users      `gorm:"foreignkey:User;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey1      Users      `gorm:"foreignkey:User;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Award      uint64     `gorm:"index:idx_winning_infos_award;column:award;type:bigint unsigned" json:"award"`
-	AwardInfos AwardInfos `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey2 	   AwardInfos `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Lottery    uint64     `gorm:"index:idx_winning_infos_lottery;column:lottery;type:bigint unsigned" json:"lottery"`
-	Lotteries  Lotteries  `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Fkey3      Lotteries  `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Address    string     `gorm:"column:address;type:tinytext" json:"address"`
 	Handout    bool       `gorm:"column:handout;type:tinyint(1);default:0" json:"handout"`
 }
