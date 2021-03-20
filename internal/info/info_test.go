@@ -43,13 +43,13 @@ func setup() {
 
 	db.Create(&Users{ID: 26567004, AccessToken: "test_test_test", TokenType: 0, Role: auth.RoleNormal})
 
-	db.Create(&Lotteries{ID: 1, Title: "嘉年华plus1", Description: "好礼相送", Permanent: 1, Temporary: 6, StartTime: res[0], EndTime: res[1]})
-	db.Create(&Lotteries{ID: 2, Title: "嘉年华plus2", Description: "好礼相送2", Permanent: 2, Temporary: 6, StartTime: res[2], EndTime: res[3]})
-	db.Create(&Lotteries{ID: 3, Title: "嘉年华plus3", Description: "好礼相送3", Permanent: 3, Temporary: 10, StartTime: res[4], EndTime: res[5]})
-	db.Create(&Lotteries{ID: 4, Title: "嘉年华plus4", Description: "好礼相送4", Permanent: 1, Temporary: 1, StartTime: res[6], EndTime: res[7]})
+	db.Create(&Lotteries{ID: 1, Title: "plus1", Description: "description1", Permanent: 1, Temporary: 6, StartTime: res[0], EndTime: res[1]})
+	db.Create(&Lotteries{ID: 2, Title: "plus2", Description: "description2", Permanent: 2, Temporary: 6, StartTime: res[2], EndTime: res[3]})
+	db.Create(&Lotteries{ID: 3, Title: "plus3", Description: "description3", Permanent: 3, Temporary: 10, StartTime: res[4], EndTime: res[5]})
+	db.Create(&Lotteries{ID: 4, Title: "plus4", Description: "description4", Permanent: 1, Temporary: 1, StartTime: res[6], EndTime: res[7]})
 
-	db.Create(&AwardInfos{ID: 1, Lottery: 1, Name: "ipad", Type: 1, Description: "平板", Pic: "test", Total: 1, DisplayRate: 20000, Rate: 80090, Value: 25000})
-	db.Create(&AwardInfos{ID: 2, Lottery: 1, Name: "再来一次", Type: 1, Description: "平板", Pic: "test", Total: 1000, DisplayRate: 20000, Rate: 200000, Value: 100})
+	db.Create(&AwardInfos{ID: 1, Lottery: 1, Name: "ipad", Type: 1, Description: "ipad", Pic: "test", Total: 1, DisplayRate: 20000, Rate: 80090, Value: 25000})
+	db.Create(&AwardInfos{ID: 2, Lottery: 1, Name: "again", Type: 1, Description: "again", Pic: "test", Total: 1000, DisplayRate: 20000, Rate: 200000, Value: 100})
 
 	db.Create(&Awards{Award: 1, Lottery: 1, Reamin: 1})
 
@@ -58,12 +58,12 @@ func setup() {
 }
 
 func teardown() {
-	db := utils.GetMysql()
-	db.Delete(&Users{}, []uint64{26567004})
-	db.Delete(&Lotteries{}, []uint64{1, 2, 3, 4})
-	db.Delete(&AwardInfos{}, []uint64{1, 2})
-	db.Delete(&Awards{}, []uint64{1})
-	db.Delete(&WinningInfos{}, []uint64{1, 2})
+	//db := utils.GetMysql()
+	//db.Delete(&Users{}, []uint64{26567004})
+	//db.Delete(&Lotteries{}, []uint64{1, 2, 3, 4})
+	//db.Delete(&AwardInfos{}, []uint64{1, 2})
+	//db.Delete(&Awards{}, []uint64{1})
+	//db.Delete(&WinningInfos{}, []uint64{1, 2})
 }
 
 
