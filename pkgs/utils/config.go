@@ -75,3 +75,12 @@ func getMongoConfig() *qmgo.Config {
 		},
 	}
 }
+
+func getKafkaAddr() (addr []string) {
+	config := GetConfig("kafka")
+	ai := config["addr"].([]interface{})
+	for _, i := range ai {
+		addr = append(addr, i.(string))
+	}
+	return
+}
