@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/mitchellh/go-homedir"
-	"github.com/qiniu/qmgo"
 	"gopkg.in/yaml.v2"
 )
 
@@ -61,18 +60,6 @@ func getRedisOption() *redis.Options {
 		Addr:     fmt.Sprintf("%s:%d", config["host"], config["port"]),
 		Password: config["password"].(string),
 		DB:       config["database"].(int),
-	}
-}
-
-func getMongoConfig() *qmgo.Config {
-	config := GetConfig("mongodb")
-	return &qmgo.Config{
-		Uri:      fmt.Sprintf("mongodb://%s:%d", config["host"], config["port"]),
-		Database: config["database"].(string),
-		Auth: &qmgo.Credential{
-			Username: config["user"].(string),
-			Password: config["password"].(string),
-		},
 	}
 }
 
