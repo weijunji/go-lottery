@@ -21,6 +21,9 @@ before_install:
   - sleep 5
   - kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --topic WinningTopic --partitions 1 --replication-factor 1
 
+before_script:
+  - sudo redis-server /etc/redis/redis.conf --port 6379 --requirepass 'passw0rd'
+
 script:
   - mv lottery_conf.yaml ~/lottery_conf.yaml
   - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
