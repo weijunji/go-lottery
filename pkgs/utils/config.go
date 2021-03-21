@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/mitchellh/go-homedir"
-	"github.com/qiniu/qmgo"
 	"gopkg.in/yaml.v2"
 )
 
@@ -64,14 +63,11 @@ func getRedisOption() *redis.Options {
 	}
 }
 
-func getMongoConfig() *qmgo.Config {
-	config := GetConfig("mongodb")
-	return &qmgo.Config{
-		Uri:      fmt.Sprintf("mongodb://%s:%d", config["host"], config["port"]),
-		Database: config["database"].(string),
-		Auth: &qmgo.Credential{
-			Username: config["user"].(string),
-			Password: config["password"].(string),
-		},
+func getKafkaAddr() (addr []string) {
+	config := GetConfig("kafka")
+	ai := config["addr"].([]interface{})
+	for _, i := range ai {
+		addr = append(addr, i.(string))
 	}
+	return
 }

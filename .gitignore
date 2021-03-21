@@ -20,3 +20,5 @@ lottery_conf.yaml
 # coverage file
 coverage
 coverage.txt
+
+.idea/*
