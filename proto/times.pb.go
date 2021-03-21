@@ -187,6 +187,7 @@ var file_proto_times_proto_goTypes = []interface{}{
 }
 var file_proto_times_proto_depIdxs = []int32{
 	2, // 0: lottery.UserTimes.update:type_name -> google.protobuf.Timestamp
+
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
