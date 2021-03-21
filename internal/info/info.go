@@ -83,7 +83,7 @@ type Awards struct {
 	Fkey2 	   AwardInfos `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Lottery    uint64     `gorm:"index:idx_awards_lottery;column:lottery;type:bigint unsigned;not null" json:"lottery"`
 	Fkey1  	   Lotteries  `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Reamin     int64      `gorm:"column:reamin;type:bigint" json:"reamin"`
+	Remain     int64      `gorm:"column:remain;type:bigint" json:"remain"`
 }
 // TableName get sql table name.
 func (m *Awards) TableName() string {
@@ -129,21 +129,18 @@ func LotteryInfo(c *gin.Context) {
 	rows := request.Rows
 	db := utils.GetMysql()
 
-	var lotteries []Lotteries
 	var lotteryCount int64
-	if err := db.Table("lotteries").Where("end_time > NOW()").Find(&lotteries).Count(&lotteryCount).Error; err != nil {
+	if err := db.Table("lotteries").Where("end_time > NOW()").Count(&lotteryCount).Error; err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	//out of range
-	flag := judgePageRange(page, rows, uint64(lotteryCount))
-	if flag == 0 {
+	lotteries := make([]Lotteries, 0, rows)
+	if err := db.Table("lotteries").Where("end_time > NOW()").Limit(int(rows)).Offset(int((page - 1) * rows)).Find(&lotteries).Error; err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	lotteriesRequest := lotteries[(page-1)*rows : flag]
 	res := LotteryInfoRes{
-		lotteriesRequest,
+		lotteries,
 		page,
 		rows,
 		lotteryCount,
@@ -189,13 +186,12 @@ func AwardsInfo(c *gin.Context) {
 	db := utils.GetMysql()
 
 	var awardsCount int64
-	var awardsInfos []AwardInfos
-	if err := db.Table("award_infos").Where("lottery = ?", lotteryId).Find(&awardsInfos).Count(&awardsCount).Error; err != nil {
+	if err := db.Table("award_infos").Where("lottery = ?", lotteryId).Count(&awardsCount).Error; err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	flag := judgePageRange(page, rows, uint64(awardsCount))
-	if flag == 0 {
+	awardsInfos := make([]AwardInfos, 0, rows)
+	if err := db.Table("award_infos").Where("lottery = ?", lotteryId).Limit(int(rows)).Offset(int((page - 1) * rows)).Find(&awardsInfos).Error; err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -205,9 +201,8 @@ func AwardsInfo(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	awardsInfos = awardsInfos[(page-1)*rows : flag]
 
-	var awardsRequest []AwardItem
+	awardsRequest := make([]AwardItem, 0, rows)
 	var t AwardItem
 	for _, v := range awardsInfos {
 		t.ID = v.ID
@@ -261,31 +256,26 @@ func WinInfo(c *gin.Context) {
 	userId := request.UserId
 	page := request.Page
 	rows := request.Rows
+	db := utils.GetMysql()
 
 	var winningCount int64
-	var winRes []WinItem
-
-	db := utils.GetMysql()
+	if err := db.Table("winning_infos").Where("winning_infos.user = ?", userId).Count(&winningCount).Error; err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	winRes := make([]WinItem, 0, rows)
 	err := db.Table("winning_infos").
 		Select("winning_infos.lottery, lotteries.title, winning_infos.award, award_infos.name, winning_infos.address, winning_infos.handout").
 		Joins("INNER JOIN lotteries ON winning_infos.lottery=lotteries.id").
 		Joins("INNER JOIN award_infos ON winning_infos.award=award_infos.id").
-		Where("winning_infos.user = ?", userId).
-		Find(&winRes).Count(&winningCount).Error
+		Where("winning_infos.user = ?", userId).Limit(int(rows)).Offset(int((page - 1) * rows)).Find(&winRes).Error
 	if err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
-
-	flag := judgePageRange(page, rows, uint64(winningCount))
-	if flag == 0 {
-		c.Status(http.StatusNotFound)
-		return
-	}
-	winReq := winRes[(page-1)*rows : flag]
 	res := WinningInfoRes{
 		userId,
-		winReq,
+		winRes,
 		page,
 		rows,
 		winningCount,
@@ -297,7 +287,6 @@ type returnType struct {
 	Permanent uint64 `json:"permanent"`
 	Temporary uint64 `json:"temporary"`
 }
-
 //Query user's remaining lottery draws
 func DrawTimes(c *gin.Context) {
 	request := struct {
@@ -310,7 +299,6 @@ func DrawTimes(c *gin.Context) {
 	}
 	userId := request.UserId
 	lotteryId := request.LotteryId
-
 	ctx := context.Background()
 	if rdb == nil {
 		c.Status(http.StatusInternalServerError)
@@ -326,7 +314,7 @@ func DrawTimes(c *gin.Context) {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		//no data in lottery
+		// no data in lottery, so lottery.ID == 0
 		if lottery.ID == 0 {
 			c.Status(http.StatusNotFound)
 			return
@@ -386,21 +374,6 @@ func QueryLotteryById(lotteryId uint64) (Lotteries, uint64) {
 		return lottery, 1
 	}
 	return lottery, 0
-}
-
-// Solve page numbering issues
-func judgePageRange(page, rows, cnt uint64) uint64 {
-	flag := page * rows
-	// out of range
-	if (page != 1 && flag > cnt) || flag == 0 {
-		return 0
-	}
-	// return the maximum rows
-	if flag > cnt {
-		return cnt
-	} else {
-		return flag
-	}
 }
 
 // Get the timestamp of 0 o'clock and 24 o'clock today

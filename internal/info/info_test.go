@@ -51,19 +51,19 @@ func setup() {
 	db.Create(&AwardInfos{ID: 1, Lottery: 1, Name: "ipad", Type: 1, Description: "ipad", Pic: "test", Total: 1, DisplayRate: 20000, Rate: 80090, Value: 25000})
 	db.Create(&AwardInfos{ID: 2, Lottery: 1, Name: "again", Type: 1, Description: "again", Pic: "test", Total: 1000, DisplayRate: 20000, Rate: 200000, Value: 100})
 
-	db.Create(&Awards{Award: 1, Lottery: 1, Reamin: 1})
+	db.Create(&Awards{Award: 1, Lottery: 1, Remain: 1})
 
 	db.Create(&WinningInfos{ID: 1, User: 26567004, Award: 1, Lottery: 1, Address: "test", Handout: false})
 	db.Create(&WinningInfos{ID: 2, User: 26567004, Award: 2, Lottery: 1, Address: "test", Handout: true})
 }
 
 func teardown() {
-	//db := utils.GetMysql()
-	//db.Delete(&Users{}, []uint64{26567004})
-	//db.Delete(&Lotteries{}, []uint64{1, 2, 3, 4})
-	//db.Delete(&AwardInfos{}, []uint64{1, 2})
-	//db.Delete(&Awards{}, []uint64{1})
-	//db.Delete(&WinningInfos{}, []uint64{1, 2})
+	db := utils.GetMysql()
+	db.Delete(&Users{}, []uint64{26567004})
+	db.Delete(&Lotteries{}, []uint64{1, 2, 3, 4})
+	db.Delete(&AwardInfos{}, []uint64{1, 2})
+	db.Delete(&Awards{}, []uint64{1})
+	db.Delete(&WinningInfos{}, []uint64{1, 2})
 }
 
 
@@ -78,10 +78,7 @@ func TestLotteryInfo(t *testing.T) {
 	}{
 		{`{"page":1,"rows":3}`, http.StatusOK},
 		{`{"page":2,"rows":1}`, http.StatusOK},
-		{`{"page":3,"rows":2}`, http.StatusNotFound},
-		{`{"page":0,"rows":5}`, http.StatusNotFound},
-		{`{"page":1,"rows":0}`, http.StatusNotFound},
-		{`{"page":999,"rows":999}`, http.StatusNotFound},
+		{`{"page":999,"rows":999}`, http.StatusOK},
 	}
 
 	for _, c := range cases {
@@ -104,7 +101,7 @@ func TestAwardsInfo(t *testing.T) {
 		{`{"lottery_id":1,"page":1,"rows":2}`, http.StatusOK},
 		{`{"lottery_id":1,"page":2,"rows":1}`, http.StatusOK},
 		{`{"lottery_id":1,"page":1,"rows":20}`, http.StatusOK},
-		{`{"lottery_id":999,"page":1,"rows":20}`, http.StatusNotFound},
+		{`{"lottery_id":999,"page":1,"rows":20}`, http.StatusOK},
 	}
 
 	for _, c := range cases {
@@ -126,7 +123,7 @@ func TestWinInfo(t *testing.T) {
 	}{
 		{`{"user_id":26567004,"page":1,"rows":2}`, http.StatusOK},
 		{`{"user_id":26567004,"page":1,"rows":10}`, http.StatusOK},
-		{`{"user_id":26567004,"page":9,"rows":99}`, http.StatusNotFound},
+		{`{"user_id":26567004,"page":9,"rows":99}`, http.StatusOK},
 	}
 	for _, c := range cases {
 		w := httptest.NewRecorder()
