@@ -2,10 +2,11 @@ package manage
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/weijunji/go-lottery/pkgs/utils"
 )
 
 const timeLayoutStr = "2006-01-02 15:04:05"
@@ -13,7 +14,7 @@ const timeLayoutStr = "2006-01-02 15:04:05"
 var ctx = utils.GetRedis().Context()
 
 func init() {
-	utils.GetMysql().AutoMigrate(&User{}, &Lottery{}, &AwardInfo{}, &AwardInfo{}, &WinningInfo{}, &Award{})
+	utils.GetMysql().AutoMigrate(&User{}, &WinningInfo{})
 }
 
 /// User : struct for user
@@ -91,7 +92,7 @@ type WinningInfo struct {
 type Award struct {
 	Award   uint64    `gorm:"primary_key; type:int unsigned"`
 	Lottery uint64    `gorm:"type:int unsigned; index;not null"`
-	Reamin  uint64    `gorm:"type:int"`
+	Remain  uint64    `gorm:"type:int"`
 	Fkey1   Lottery   `gorm:"foreignkey:Lottery;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Fkey2   AwardInfo `gorm:"foreignkey:Award;association_foreignkey:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
@@ -183,7 +184,7 @@ func addawards(c *gin.Context) {
 			if tx.Table("awards").Create(Award{
 				Award:   awards.AwardInfos[i].ID,
 				Lottery: awards.AwardInfos[i].Lottery,
-				Reamin:  awards.AwardInfos[i].Total,
+				Remain:  awards.AwardInfos[i].Total,
 			}).Error != nil {
 				tx.Rollback()
 				c.Status(http.StatusBadRequest)
