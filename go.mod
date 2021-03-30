@@ -16,3 +16,4 @@ require (
 	go.mongodb.org/mongo-driver v1.4.4
 	google.golang.org/protobuf v1.26.0
 	gorm.io/gorm v1.20.9
+)
