@@ -22,4 +22,4 @@ coverage
 coverage.txt
 
 # Editor-generated files
-.idea/
+.idea/*
