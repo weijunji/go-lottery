@@ -1,12 +1,11 @@
-package main
+package lottery
 
 import (
 	"flag"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
-	"github.com/weijunji/go-lottery/internal/auth"
+	"github.com/weijunji/go-lottery/internal/lottery"
 	"github.com/weijunji/go-lottery/pkgs/middleware"
+	"strconv"
 )
 
 func main() {
@@ -18,11 +17,11 @@ func main() {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
-	g := r.Group("/auth", middleware.AuthMiddleware())
+	g := r.Group("/lottery", middleware.AuthMiddleware())
 	g.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
 	authGroup := g.Group("/", middleware.LoginRequired())
-	auth.SetupRouter(g, authGroup)
+	lottery.SetupRouter(g, authGroup)
 	return r
 }
