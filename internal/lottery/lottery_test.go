@@ -48,7 +48,7 @@ func setup() {
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1000, 1000, 200000, 1)")
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1001, 1000, 300000, 1)")
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1002, 1000, 500000, 0)")
-	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1000, 1000, 2)")
+	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1000, 1000, 5)")
 	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1001, 1000, 5)")
 	rds.Set(context.Background(), "awards:1002", 100, 0)
 }
