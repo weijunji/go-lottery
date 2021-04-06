@@ -1,0 +1,17 @@
+syntax = "proto3";
+package lottery;
+
+option go_package = "/proto";
+
+import "google/protobuf/timestamp.proto";
+
+message UserTimes {
+    uint32 permanent = 1;
+    uint32 temporary = 2;
+    google.protobuf.Timestamp update = 3;
+}
+
+message LotteryTimes {
+    uint32 permanent = 1;
+    uint32 temporary = 2;
+}

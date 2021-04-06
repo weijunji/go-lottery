@@ -2,10 +2,11 @@ package manage
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/weijunji/go-lottery/pkgs/utils"
 )
 
 const timeLayoutStr = "2006-01-02 15:04:05"
@@ -13,7 +14,7 @@ const timeLayoutStr = "2006-01-02 15:04:05"
 var ctx = utils.GetRedis().Context()
 
 func init() {
-	utils.GetMysql().AutoMigrate(&User{}, &Lottery{}, &AwardInfo{}, &AwardInfo{}, &WinningInfo{}, &Award{})
+	utils.GetMysql().AutoMigrate(&User{}, &WinningInfo{})
 }
 
 /// User : struct for user

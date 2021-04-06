@@ -1,0 +1,34 @@
+syntax = "proto3";
+package lottery;
+
+option go_package = "/proto";
+
+import "google/protobuf/timestamp.proto";
+
+message LotteryRates {
+  uint32 total = 1;
+
+  enum value {
+    LOW_VAL = 0;
+    HIGH_VAL = 1;
+  }
+
+  message AwardRate {
+    uint64 id = 1;
+    uint32 rate = 2;
+    value value = 3;
+  }
+
+  repeated AwardRate rates = 2;
+}
+
+message LotteryDuration {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+}
+
+message WinningInfo {
+  uint64 user = 1;
+  uint64 lottery = 2;
+  uint64 award = 3;
+}
