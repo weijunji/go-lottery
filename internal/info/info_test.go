@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/weijunji/go-lottery/pkgs/auth"
+	"github.com/weijunji/go-lottery/pkgs/middleware"
 	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,8 @@ import (
 	"testing"
 	"time"
 )
+
+var token, _ = utils.GenerateToken(26567004, auth.RoleNormal, time.Minute*10)
 
 func TestMain(m *testing.M) {
 	setup()
@@ -66,11 +69,11 @@ func teardown() {
 	db.Delete(&WinningInfos{}, []uint64{1, 2})
 }
 
-
 func TestLotteryInfo(t *testing.T) {
 	r := gin.Default()
-	infoGroup := r.Group("/info")
-	LoadRouter(infoGroup)
+	g := r.Group("/info", middleware.AuthMiddleware())
+	infoGroup := g.Group("/", middleware.LoginRequired())
+	LoadRouter(g, infoGroup)
 
 	cases := []struct {
 		body string
@@ -84,6 +87,7 @@ func TestLotteryInfo(t *testing.T) {
 	for _, c := range cases {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/info/lottery_info", strings.NewReader(c.body))
+		req.Header.Add("Authorization", token)
 		r.ServeHTTP(w, req)
 		assert.Equal(t, c.expect, w.Code)
 	}
@@ -91,8 +95,9 @@ func TestLotteryInfo(t *testing.T) {
 
 func TestAwardsInfo(t *testing.T) {
 	r := gin.Default()
-	infoGroup := r.Group("/info")
-	LoadRouter(infoGroup)
+	g := r.Group("/info", middleware.AuthMiddleware())
+	infoGroup := g.Group("/", middleware.LoginRequired())
+	LoadRouter(g, infoGroup)
 
 	cases := []struct {
 		body string
@@ -107,6 +112,7 @@ func TestAwardsInfo(t *testing.T) {
 	for _, c := range cases {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/info/awards_info", strings.NewReader(c.body))
+		req.Header.Add("Authorization", token)
 		r.ServeHTTP(w, req)
 		assert.Equal(t, c.expect, w.Code)
 	}
@@ -114,20 +120,22 @@ func TestAwardsInfo(t *testing.T) {
 
 func TestWinInfo(t *testing.T) {
 	r := gin.Default()
-	infoGroup := r.Group("/info")
-	LoadRouter(infoGroup)
-
+	g := r.Group("/info", middleware.AuthMiddleware())
+	infoGroup := g.Group("/", middleware.LoginRequired())
+	LoadRouter(g, infoGroup)
 	cases := []struct {
 		body string
 		expect int
 	}{
-		{`{"user_id":26567004,"page":1,"rows":2}`, http.StatusOK},
-		{`{"user_id":26567004,"page":1,"rows":10}`, http.StatusOK},
-		{`{"user_id":26567004,"page":9,"rows":99}`, http.StatusOK},
+		{`{"page":1,"rows":2}`, http.StatusOK},
+		{`{"page":1,"rows":10}`, http.StatusOK},
+		{`{"page":9,"rows":99}`, http.StatusOK},
 	}
+
 	for _, c := range cases {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/info/win_info", strings.NewReader(c.body))
+		req.Header.Add("Authorization", token)
 		r.ServeHTTP(w, req)
 		assert.Equal(t, c.expect, w.Code)
 	}
@@ -135,8 +143,9 @@ func TestWinInfo(t *testing.T) {
 
 func TestDrawTimes(t *testing.T) {
 	r := gin.Default()
-	infoGroup := r.Group("/info")
-	LoadRouter(infoGroup)
+	g := r.Group("/info", middleware.AuthMiddleware())
+	infoGroup := g.Group("/", middleware.LoginRequired())
+	LoadRouter(g, infoGroup)
 
 	cases := []struct {
 		body string
@@ -149,6 +158,7 @@ func TestDrawTimes(t *testing.T) {
 	for _, c := range cases {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/info/draw_times", strings.NewReader(c.body))
+		req.Header.Add("Authorization", token)
 		r.ServeHTTP(w, req)
 		assert.Equal(t, c.expect, w.Code)
 	}

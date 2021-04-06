@@ -2,6 +2,7 @@ package info
 
 import (
 	"context"
+	"github.com/weijunji/go-lottery/pkgs/middleware"
 	"net/http"
 	"strconv"
 	"time"
@@ -23,12 +24,12 @@ func init() {
 }
 
 //load routers
-func LoadRouter(r *gin.RouterGroup) {
+func LoadRouter(_ *gin.RouterGroup, infoGroup *gin.RouterGroup) {
 	{
-		r.GET("/lottery_info", LotteryInfo)
-		r.GET("/awards_info", AwardsInfo)
-		r.GET("/win_info", WinInfo)
-		r.GET("/draw_times", DrawTimes)
+		infoGroup.GET("/lottery_info", LotteryInfo)
+		infoGroup.GET("/awards_info", AwardsInfo)
+		infoGroup.GET("/win_info", WinInfo)
+		infoGroup.GET("/draw_times", DrawTimes)
 	}
 }
 
@@ -245,7 +246,6 @@ type WinningInfoRes struct {
 //Get the user winning information of the lottery
 func WinInfo(c *gin.Context) {
 	request := struct {
-		UserId uint64 `json:"user_id"`
 		Page   uint64 `json:"page"`
 		Rows   uint64 `json:"rows"`
 	}{}
@@ -253,9 +253,11 @@ func WinInfo(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	userId := request.UserId
 	page := request.Page
 	rows := request.Rows
+	info, _ := c.Get("userinfo")
+	userId := info.(middleware.Userinfo).ID
+
 	db := utils.GetMysql()
 
 	var winningCount int64
@@ -290,15 +292,16 @@ type returnType struct {
 //Query user's remaining lottery draws
 func DrawTimes(c *gin.Context) {
 	request := struct {
-		UserId    uint64 `json:"user_id"`
 		LotteryId uint64 `json:"lottery_id"`
 	}{}
 	if c.ShouldBindJSON(&request) != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	userId := request.UserId
+	info, _ := c.Get("userinfo")
+	userId := info.(middleware.Userinfo).ID
 	lotteryId := request.LotteryId
+
 	ctx := context.Background()
 	if rdb == nil {
 		c.Status(http.StatusInternalServerError)
