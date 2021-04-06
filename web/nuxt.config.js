@@ -28,6 +28,7 @@ export default {
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
+    '@/plugins/axios',
     '@/plugins/element-ui'
   ],
 
@@ -47,7 +48,10 @@ export default {
   ],
 
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
-  axios: {},
+  axios: {
+    baseURL: 'https://localhost:8081/',
+    https: false
+  },
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
