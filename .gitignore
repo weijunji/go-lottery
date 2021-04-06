@@ -21,8 +21,4 @@ lottery_conf.yaml
 coverage
 coverage.txt
 
-<<<<<<< HEAD
-=======
-# Editor-generated files
->>>>>>> af5dfe098d6437a46890a4d35b39ee79c25fd1c5
 .idea/*
