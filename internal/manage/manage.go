@@ -2,11 +2,10 @@ package manage
 
 import (
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"github.com/weijunji/go-lottery/pkgs/utils"
+	"net/http"
+	"time"
 )
 
 const timeLayoutStr = "2006-01-02 15:04:05"
@@ -178,7 +177,7 @@ func addawards(c *gin.Context) {
 		awards.AwardInfos[i].Lottery = awards.Id
 		err := tx.Table("award_infos").Create(&awards.AwardInfos[i]).Error
 		//low value award,set the rest of award in redis
-		if awards.AwardInfos[i].Value < 20000 {
+		if awards.AwardInfos[i].Value == 0 {
 			utils.GetRedis().Set(ctx, fmt.Sprintf("awards:%d", awards.AwardInfos[i].ID), awards.AwardInfos[i].Total, 0)
 		} else {
 			if tx.Table("awards").Create(Award{

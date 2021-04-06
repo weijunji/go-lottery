@@ -3,11 +3,34 @@ package manage
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/assert/v2"
+	"github.com/weijunji/go-lottery/pkgs/utils"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
+
+func setup() {
+	gin.SetMode(gin.TestMode)
+
+	db, _ := utils.GetMysql().DB()
+	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1000, 'temptest001', 1, 2, NOW(), '2029-1-1')")
+	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1001, 'temptest002', 5, 5, '1999-1-1', '2020-12-31')")
+	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1002, 'temptest003', 5, 5, '2029-1-1', '2029-1-2')")
+}
+
+func teardown() {
+	db, _ := utils.GetMysql().DB()
+	db.Exec("DELETE FROM lotteries WHERE id IN (1000, 1001, 1002)")
+}
+
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	teardown()
+	os.Exit(code)
+}
 
 func TestAddLottery(t *testing.T) {
 	r := gin.Default()
@@ -37,9 +60,9 @@ func TestUpdateLottery(t *testing.T) {
 		body string
 		code int
 	}{
-		{`{"id":1, "title": "嘉年华plus1", "description": "好礼相送", "permanent":1, "temporary":6, "startTime":"2020-02-27 15:04:05", "endTime":"2021-03-27 00:00:00"}`, http.StatusOK},
-		{`{"id":1, "title": "嘉年华plus1","description": "好礼相送","permanent":10,"temporary":6,"startTime":"2020-2-2 15:04:05","endTime":"2021-3-27 00:00:00"}`, http.StatusBadRequest},
-		{`{"id":1, "title": "嘉年华plus1","description": "好礼相送","permanent":10,"temporary":6,"startTime":"2020-02-02 15:04:05","endTime":"2021-3-27 00:00:00"}`, http.StatusBadRequest},
+		{`{"id":1000, "title": "temptest001", "description": "好礼相送", "permanent":1, "temporary":6, "startTime":"2020-02-27 15:04:05", "endTime":"2021-03-27 00:00:00"}`, http.StatusOK},
+		{`{"id":1001, "title": "嘉年华plus1","description": "好礼相送","permanent":10,"temporary":6,"startTime":"2020-2-2 15:04:05","endTime":"2021-3-27 00:00:00"}`, http.StatusBadRequest},
+		{`{"id":1002, "title": "嘉年华plus1","description": "好礼相送","permanent":10,"temporary":6,"startTime":"2020-02-02 15:04:05","endTime":"2021-3-27 00:00:00"}`, http.StatusBadRequest},
 		{`{"id":33, "title": "嘉年华plus1","description": "好礼相送","permanent":10,"temporary":6,"startTime":"2020-02-02 15:04:05","endTime":"2021-03-27 00:00:00"}`, http.StatusOK},
 	}
 	for _, data := range testData {
@@ -58,7 +81,7 @@ func TestAddawards(t *testing.T) {
 		body string
 		code int
 	}{
-		{`{"id":1,
+		{`{"id":1000,
 				"awards": [
 				   {
 						"name":"iphone",
@@ -68,11 +91,11 @@ func TestAddawards(t *testing.T) {
 						"total":1,
 						"displayrate":20000,
 						"rate":10000,
-						"value":30000
+						"value":1
 				   }
     			]
 		}`, http.StatusOK},
-		{`{"id":1,
+		{`{"id":1000,
 				"awards": [
 				   {
 						"name":"ipad",
@@ -82,11 +105,11 @@ func TestAddawards(t *testing.T) {
 						"total":1,
 						"displayrate":20000,
 						"rate":8000,
-						"value":25000
+						"value":1
 				   }
     			]
 		}`, http.StatusOK},
-		{`{"id":1,
+		{`{"id":1000,
 				"awards": [
 				   {
 						"name":"再来一次",
@@ -96,7 +119,7 @@ func TestAddawards(t *testing.T) {
 						"total":1000,
 						"displayrate":20000,
 						"rate":200000,
-						"value":100
+						"value":0
 				   }
     			]
 		}`, http.StatusOK},
@@ -110,7 +133,7 @@ func TestAddawards(t *testing.T) {
 						"total":1,
 						"displayrate":20000,
 						"rate":20000,
-						"value":10000
+						"value":1
 				   }
     			]
 		}`, http.StatusBadRequest},
