@@ -158,8 +158,8 @@ func TestDeleteaward(t *testing.T) {
 		body string
 		code int
 	}{
-		{`{"award": 1, "lottery":1}`, http.StatusOK},
-		{`{"award": 1, "lottery":1}`, http.StatusNotFound},
+		{`{"award": 999, "lottery":1001}`, http.StatusOK},
+		{`{"award": 999, "lottery":1001}`, http.StatusNotFound},
 	}
 	for _, data := range testData {
 		w := httptest.NewRecorder()
