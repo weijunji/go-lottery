@@ -1,4 +1,4 @@
-package lottery
+package main
 
 import (
 	"flag"

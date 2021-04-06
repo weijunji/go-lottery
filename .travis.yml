@@ -28,6 +28,8 @@ script:
   - mv lottery_conf.yaml ~/lottery_conf.yaml
   - go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
   - go build cmd/auth/main.go
+  - go build cmd/lottery/main.go
+  - go build cmd/cgi/main.go
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
