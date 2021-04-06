@@ -1,4 +1,4 @@
-package lottery
+package main
 
 import (
 	"flag"
@@ -6,6 +6,7 @@ import (
 	"github.com/weijunji/go-lottery/internal/lottery"
 	"github.com/weijunji/go-lottery/pkgs/middleware"
 	"strconv"
+	"github.com/gin-contrib/pprof"
 )
 
 func main() {
@@ -17,6 +18,7 @@ func main() {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
+	pprof.Register(r)
 	g := r.Group("/lottery", middleware.AuthMiddleware())
 	g.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
