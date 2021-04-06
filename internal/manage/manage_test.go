@@ -18,11 +18,15 @@ func setup() {
 	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1000, 'temptest001', 1, 2, NOW(), '2029-1-1')")
 	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1001, 'temptest002', 5, 5, '1999-1-1', '2020-12-31')")
 	db.Exec("INSERT INTO lotteries(id, title, permanent, temporary, start_time, end_time) VALUES (1002, 'temptest003', 5, 5, '2029-1-1', '2029-1-2')")
+	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (999, 1001, 2)")
+	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1000, 1000, 2)")
+	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1001, 1000, 5)")
 }
 
 func teardown() {
 	db, _ := utils.GetMysql().DB()
 	db.Exec("DELETE FROM lotteries WHERE id IN (1000, 1001, 1002)")
+	db.Exec("DELETE FROM awards WHERE id IN (999, 1000, 1001)")
 }
 
 func TestMain(m *testing.M) {
