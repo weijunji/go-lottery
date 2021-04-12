@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 syntax = "proto3";
 package lottery;
 
@@ -16,22 +15,3 @@ message LotteryTimes {
     uint32 permanent = 1;
     uint32 temporary = 2;
 }
-=======
-syntax = "proto3";
-package lottery;
-
-option go_package = "/proto";
-
-import "google/protobuf/timestamp.proto";
-
-message UserTimes {
-    uint32 permanent = 1;
-    uint32 temporary = 2;
-    google.protobuf.Timestamp update = 3;
-}
-
-message LotteryTimes {
-    uint32 permanent = 1;
-    uint32 temporary = 2;
-}
->>>>>>> af5dfe098d6437a46890a4d35b39ee79c25fd1c5
