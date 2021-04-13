@@ -37,7 +37,7 @@ jobs:
       run: mv lottery_conf.example.yaml ~/lottery_conf.yaml
       
     - name: Setup database
-      run: mysql -u root --password="passw0rd" < database.sql
+      run: mysql -h 127.0.0.1 -u root --password="passw0rd" < database.sql
       
     - name: Setup kafka
       run: |
