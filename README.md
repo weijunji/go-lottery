@@ -1,5 +1,6 @@
 # go-lottery
 [![Go Report Card](https://goreportcard.com/badge/github.com/weijunji/go-lottery)](https://goreportcard.com/report/github.com/weijunji/go-lottery)
+[![Github Action](https://github.com/weijunji/go-lottery/actions/workflows/build.yml/badge.svg)](https://github.com/weijunji/go-lottery/actions)
 [![Build Status](https://www.travis-ci.com/weijunji/go-lottery.svg?branch=main)](https://www.travis-ci.com/weijunji/go-lottery)
 [![codecov](https://codecov.io/gh/weijunji/go-lottery/branch/main/graph/badge.svg?token=wLuLssUnbF)](https://codecov.io/gh/weijunji/go-lottery)
 
