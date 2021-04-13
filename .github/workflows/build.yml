@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    - name: Cache node modules
+    - name: Cache kafka
       uses: actions/cache@v2
       with:
         path: ./kafka
