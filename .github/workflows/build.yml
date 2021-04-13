@@ -26,6 +26,7 @@ jobs:
     
     - name: Cache kafka
       uses: actions/cache@v2
+      id: kafka_cache
       with:
         path: ./kafka
         key: ${{ runner.os }}-kafka
@@ -54,11 +55,15 @@ jobs:
       
     - name: Setup database
       run: mysql -h 127.0.0.1 -u root --password="passw0rd" < database.sql
-      
-    - name: Setup kafka
+    
+    - name: Install kafka
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         wget https://downloads.apache.org/kafka/2.7.0/kafka_2.13-2.7.0.tgz -O kafka.tgz
         mkdir -p kafka && tar xzf kafka.tgz -C kafka --strip-components 1
+      
+    - name: Setup kafka
+      run: |
         nohup bash -c "cd kafka && bin/zookeeper-server-start.sh config/zookeeper.properties &"
         nohup bash -c "cd kafka && bin/kafka-server-start.sh config/server.properties &"
         sleep 5
