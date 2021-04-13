@@ -1,4 +1,4 @@
-name: Go
+name: Build
 
 on:
   push:
@@ -23,6 +23,22 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+    
+    - name: Cache node modules
+      uses: actions/cache@v2
+      with:
+        path: ./kafka
+        key: ${{ runner.os }}-kafka
+        restore-keys: |
+          ${{ runner.os }}-kafka
+          
+    - name: Cache go mod
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
     
     - uses: getong/redis-action@v1
       with:
