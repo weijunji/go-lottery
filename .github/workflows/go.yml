@@ -10,6 +10,28 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --requirepass passw0rd
+        ports:
+          - 6379:6379
+          
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: lottery_test
+          MYSQL_ROOT_PASSWORD: passw0rd
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
     steps:
     - uses: actions/checkout@v2
 
@@ -17,6 +39,18 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.15
+        
+    - name: Create conf file
+      run: mv lottery_conf.example.yaml ~/lottery_conf.yaml
+      
+    - name: Setup kafka
+      run: |
+        wget https://downloads.apache.org/kafka/2.7.0/kafka_2.13-2.7.0.tgz -O kafka.tgz
+        mkdir -p kafka && tar xzf kafka.tgz -C kafka --strip-components 1
+        nohup bash -c "cd kafka && bin/zookeeper-server-start.sh config/zookeeper.properties &"
+        nohup bash -c "cd kafka && bin/kafka-server-start.sh config/server.properties &"
+        sleep 5
+        kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --topic WinningTopic --partitions 1 --replication-factor 1
 
     - name: Build Auth
       run: go build cmd/auth/main.go
