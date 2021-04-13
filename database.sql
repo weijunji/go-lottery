@@ -44,7 +44,7 @@ CREATE TABLE `users` (
   `access_token` varchar(128) NOT NULL,
   `token_type` bigint NOT NULL,
   `role` bigint DEFAULT 1,
-  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP,
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `access_token` (`access_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
