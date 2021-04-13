@@ -1,0 +1,40 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+
+    - name: Build Auth
+      run: go build cmd/auth/main.go
+      
+    - name: Build CGI
+      run: go build cmd/cgi/main.go
+      
+    - name: Build Info
+      run: go build cmd/info/main.go
+      
+    - name: Build Lottery
+      run: go build cmd/lottery/main.go
+      
+    - name: Build Manage
+      run: go build cmd/manage/main.go
+
+    - name: Test
+      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
