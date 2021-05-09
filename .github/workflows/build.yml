@@ -1,0 +1,91 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: lottery_test
+          MYSQL_ROOT_PASSWORD: passw0rd
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Cache kafka
+      uses: actions/cache@v2
+      id: kcache
+      with:
+        path: ./kafka
+        key: ${{ runner.os }}-kafka
+        restore-keys: |
+          ${{ runner.os }}-kafka
+          
+    - name: Cache go mod
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    
+    - uses: getong/redis-action@v1
+      with:
+        redis password: 'passw0rd'
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+        
+    - name: Create conf file
+      run: mv lottery_conf.example.yaml ~/lottery_conf.yaml
+      
+    - name: Setup database
+      run: mysql -h 127.0.0.1 -u root --password="passw0rd" < database.sql
+    
+    - name: Install kafka
+      if: steps.kcache.outputs.cache-hit != 'true'
+      run: |
+        wget https://downloads.apache.org/kafka/2.7.0/kafka_2.13-2.7.0.tgz -O kafka.tgz
+        mkdir -p kafka && tar xzf kafka.tgz -C kafka --strip-components 1
+      
+    - name: Setup kafka
+      run: |
+        nohup bash -c "cd kafka && bin/zookeeper-server-start.sh config/zookeeper.properties &"
+        nohup bash -c "cd kafka && bin/kafka-server-start.sh config/server.properties &"
+        sleep 5
+        kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --topic WinningTopic --partitions 1 --replication-factor 1
+
+    - name: Build Auth
+      run: go build cmd/auth/main.go
+      
+    - name: Build CGI
+      run: go build cmd/cgi/main.go
+      
+    - name: Build Info
+      run: go build cmd/info/main.go
+      
+    - name: Build Lottery
+      run: go build cmd/lottery/main.go
+      
+    - name: Build Manage
+      run: go build cmd/manage/main.go
+
+    - name: Test
+      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1

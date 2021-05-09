@@ -1,0 +1,23 @@
+common:
+  secretKey: FlFhhEDskm68mOAbi!yTryI0KleXlgJ@
+
+oauth:
+  client_id: a00000000000
+  client_secret: a00000000000000000000000000
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: passw0rd
+  database: lottery_test
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: passw0rd
+  database: 0
+
+kafka:
+  addr:
+    - 127.0.0.1:9092
