@@ -16,10 +16,10 @@ var targetMap = map[string]string{
 }
 
 func SetupRouter(r *gin.Engine) {
-	r.Any("/auth", Forward(targetMap["Auth"]))
-	r.Any("/lottery", Forward(targetMap["Lottery"]))
-	r.Any("/info", Forward(targetMap["Info"]))
-	r.Any("/manage", Forward(targetMap["Manage"]))
+	r.Any("/auth/*any", Forward(targetMap["Auth"]))
+	r.GET("/lottery/*any", Forward(targetMap["Lottery"]))
+	r.Any("/info/*any", Forward(targetMap["Info"]))
+	r.Any("/manage/*any", Forward(targetMap["Manage"]))
 }
 
 func Forward(target string) func(c *gin.Context) {
