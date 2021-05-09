@@ -48,7 +48,7 @@ func setup() {
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1000, 1000, 200000, 1)")
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1001, 1000, 300000, 1)")
 	db.Exec("INSERT INTO award_infos(id, lottery, rate, value) VALUES (1002, 1000, 500000, 0)")
-	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1000, 1000, 2)")
+	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1000, 1000, 5)")
 	db.Exec("INSERT INTO awards(award, lottery, remain) VALUES (1001, 1000, 5)")
 	rds.Set(context.Background(), "awards:1002", 100, 0)
 }
@@ -79,15 +79,15 @@ func TestMain(m *testing.M) {
 
 func TestGetRate(t *testing.T) {
 	assert := assert.New(t)
-	rates := getRate(context.Background(), 99999999)
+	rates := GetRate(context.Background(), 99999999)
 	assert.NotEqual(rates, nil)
 	assert.Equal(rates.GetTotal(), uint32(100))
 	assert.Equal(rates.GetRates()[2].Rate, uint32(50))
 
-	rates = getRate(context.Background(), 99999998)
+	rates = GetRate(context.Background(), 99999998)
 	assert.Nil(rates)
 
-	rates = getRate(context.Background(), 1000)
+	rates = GetRate(context.Background(), 1000)
 	assert.Equal(rates.GetTotal(), uint32(1000000))
 }
 
@@ -122,30 +122,30 @@ func TestProcessLottery(t *testing.T) {
 func TestGetDuration(t *testing.T) {
 	assert := assert.New(t)
 	// from sql
-	res := getLotteryDuration(context.Background(), 1000)
+	res := GetLotteryDuration(context.Background(), 1000)
 	assert.NotNil(res)
 	now := time.Now()
 	assert.True(now.After(res.GetStart().AsTime()))
 	assert.True(now.Before(res.GetEnd().AsTime()))
 
 	// from redis
-	res = getLotteryDuration(context.Background(), 1000)
+	res = GetLotteryDuration(context.Background(), 1000)
 	assert.NotNil(res)
 
-	res = getLotteryDuration(context.Background(), 999)
+	res = GetLotteryDuration(context.Background(), 999)
 	assert.Nil(res)
 }
 
 func TestGetTimes(t *testing.T) {
 	assert := assert.New(t)
 	// from sql
-	res := getLotteryTimes(context.Background(), 1000)
+	res := GetLotteryTimes(context.Background(), 1000)
 	assert.NotNil(res)
 	assert.Equal(uint32(1), res.Permanent)
 	assert.Equal(uint32(2), res.Temporary)
 
 	// from redis
-	res = getLotteryTimes(context.Background(), 1000)
+	res = GetLotteryTimes(context.Background(), 1000)
 	assert.NotNil(res)
 }
 

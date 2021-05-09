@@ -43,7 +43,7 @@ func lotteryOnce(c *gin.Context) {
 	}
 
 	// TODO: lottery is started ?
-	duration := getLotteryDuration(c, lottery)
+	duration := GetLotteryDuration(c, lottery)
 	if duration == nil {
 		// no such lottery
 		c.Status(http.StatusNotFound)
@@ -67,7 +67,7 @@ func lotteryOnce(c *gin.Context) {
 	log.WithFields(log.Fields{"user": user, "lottery": lottery}).Info("Lottery once")
 
 	// get rate from redis
-	rates := getRate(c, lottery)
+	rates := GetRate(c, lottery)
 	if rates == nil {
 		c.Status(http.StatusNotFound)
 		return
@@ -113,9 +113,9 @@ func decreaseAwardHighVal(ctx context.Context, award uint64) bool {
 	var remain uint64
 	err = tx.QueryRow("SELECT remain FROM awards WHERE award = ? FOR UPDATE", award).Scan(&remain)
 	if err != nil {
+		_ = tx.Rollback()
 		logger.Fatal("Select failed", err)
 	}
-	log.Info("remain: ", remain)
 	if remain > 0 {
 		_, err = tx.Exec("UPDATE awards SET remain = ? WHERE award = ?", remain - 1, award)
 		if err != nil {
@@ -147,7 +147,6 @@ func sendMessage(user, lottery, award uint64) {
 	bs, _ := proto.Marshal(&info)
 
 	producer := utils.GetKafkaProducer()
-	log.Info(producer)
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = "WinningTopic"
 	msg.Value = sarama.ByteEncoder(bs)
@@ -159,7 +158,7 @@ func sendMessage(user, lottery, award uint64) {
 	}
 }
 
-func getRate(ctx context.Context,id uint64) *pb.LotteryRates {
+func GetRate(ctx context.Context,id uint64) *pb.LotteryRates {
 	logger := log.WithField("lottery", id)
 	key := fmt.Sprintf("rate:%d", id)
 	rds := utils.GetRedis()
@@ -171,7 +170,6 @@ func getRate(ctx context.Context,id uint64) *pb.LotteryRates {
 			l := lock.NewDistributeLock(ctx, "rate", id)
 			if l.Lock(time.Millisecond * 100) {
 				defer l.UnLock()
-				logger.Info("lottery rate lock success")
 				db, _ := utils.GetMysql().DB()
 				rows, err := db.QueryContext(ctx, "SELECT id, rate, value FROM award_infos WHERE lottery = ?", id)
 				if err != nil {
@@ -211,7 +209,7 @@ func getRate(ctx context.Context,id uint64) *pb.LotteryRates {
 			} else {
 				logger.Info("lottery times lock failed")
 				time.Sleep(time.Millisecond * 50)
-				return getRate(ctx, id)
+				return GetRate(ctx, id)
 			}
 		} else {
 			log.WithField("id", id).Fatal("Get rate from redis failed: ", err)
@@ -242,7 +240,7 @@ func processLottery(rates *pb.LotteryRates) *pb.LotteryRates_AwardRate {
 	return nil
 }
 
-func DateEqual(date1, date2 time.Time) bool {
+func dateEqual(date1, date2 time.Time) bool {
 	y1, m1, d1 := date1.Date()
 	y2, m2, d2 := date2.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
@@ -258,7 +256,7 @@ func decreaseTimes(ctx context.Context, lottery uint64, user uint64) bool {
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			logger.Info("no times in redis")
-			lt = getLotteryTimes(ctx, lottery)
+			lt = GetLotteryTimes(ctx, lottery)
 			times.Permanent = lt.Permanent
 			times.Temporary = lt.Temporary
 			times.Update = timestamppb.Now()
@@ -272,10 +270,10 @@ func decreaseTimes(ctx context.Context, lottery uint64, user uint64) bool {
 	}
 
 	update := times.GetUpdate().AsTime()
-	if !DateEqual(time.Now(), update) {
+	if !dateEqual(time.Now(), update) {
 		// update temporary times
 		if lt == nil {
-			lt = getLotteryTimes(ctx, lottery)
+			lt = GetLotteryTimes(ctx, lottery)
 		}
 		times.Update = timestamppb.Now()
 		times.Temporary = lt.Temporary
@@ -301,7 +299,7 @@ func decreaseTimes(ctx context.Context, lottery uint64, user uint64) bool {
 	return true
 }
 
-func getLotteryTimes(ctx context.Context, lottery uint64) (times *pb.LotteryTimes) {
+func GetLotteryTimes(ctx context.Context, lottery uint64) (times *pb.LotteryTimes) {
 	logger := log.WithField("lottery", lottery)
 	rds := utils.GetRedis()
 	key := fmt.Sprintf("lottery_times:%d", lottery)
@@ -314,7 +312,6 @@ func getLotteryTimes(ctx context.Context, lottery uint64) (times *pb.LotteryTime
 			l := lock.NewDistributeLock(ctx, "lt", lottery)
 			if l.Lock(time.Millisecond * 100) {
 				defer l.UnLock()
-				log.WithField("lottery", lottery).Info("lottery times lock success")
 				db, _ := utils.GetMysql().DB()
 				var perm, temp uint32
 				err := db.QueryRowContext(ctx, "SELECT permanent, temporary FROM lotteries WHERE id = ?", lottery).Scan(&perm, &temp)
@@ -331,7 +328,7 @@ func getLotteryTimes(ctx context.Context, lottery uint64) (times *pb.LotteryTime
 			} else {
 				logger.Info("lottery times lock failed")
 				time.Sleep(time.Millisecond * 50)
-				return getLotteryTimes(ctx, lottery)
+				return GetLotteryTimes(ctx, lottery)
 			}
 		} else {
 			logger.Fatal("Get lottery times failed")
@@ -343,7 +340,7 @@ func getLotteryTimes(ctx context.Context, lottery uint64) (times *pb.LotteryTime
 	return
 }
 
-func getLotteryDuration(ctx context.Context, lottery uint64) (duration *pb.LotteryDuration) {
+func GetLotteryDuration(ctx context.Context, lottery uint64) (duration *pb.LotteryDuration) {
 	logger := log.WithField("lottery", lottery)
 	rds := utils.GetRedis()
 	key := fmt.Sprintf("lottery_duration:%d", lottery)
@@ -377,7 +374,7 @@ func getLotteryDuration(ctx context.Context, lottery uint64) (duration *pb.Lotte
 			} else {
 				logger.Info("lottery duration lock failed")
 				time.Sleep(time.Millisecond * 50)
-				return getLotteryDuration(ctx, lottery)
+				return GetLotteryDuration(ctx, lottery)
 			}
 		} else {
 			logger.Fatal("Get duration failed")

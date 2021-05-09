@@ -17,6 +17,9 @@ func GetMysql() *gorm.DB {
 		if db, err = gorm.Open(mysql.Open(getMysqlSource()), &gorm.Config{}); err != nil {
 			panic("Failed to connect mysql")
 		}
+		sqlDB, _ := db.DB()
+		sqlDB.SetMaxIdleConns(16)
+		sqlDB.SetMaxOpenConns(16)
 	})
 	return db
 }
