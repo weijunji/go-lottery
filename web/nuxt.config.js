@@ -2,9 +2,6 @@ export default {
   // Disable server-side rendering: https://go.nuxtjs.dev/ssr-mode
   ssr: false,
 
-  // Target: https://go.nuxtjs.dev/config-target
-  target: 'static',
-
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
     title: 'web',
@@ -29,7 +26,8 @@ export default {
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
     '@/plugins/axios',
-    '@/plugins/element-ui'
+    '@/plugins/element-ui',
+    '@/plugins/clientInit'
   ],
 
   // Auto import components: https://go.nuxtjs.dev/config-components

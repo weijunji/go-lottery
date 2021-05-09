@@ -11,15 +11,22 @@
             <el-menu-item index="/manage" v-if="isAdmin">抽奖管理</el-menu-item>
           </el-menu>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="6" style="height: 60px;">
           <span style="line-height: 60px; float: right">
-            <span v-if="isLogin">{{username}}</span>
+            <el-dropdown v-if="isLogin" style="height: 60px;">
+              <el-avatar :src="avatar" fit="fill" style="top: 50%; position: relative; transform: translateY(-50%);"></el-avatar>
+              <el-dropdown-menu slot="dropdown">
+                <p style="text-align: center; color: #888;">欢迎！</p>
+                <el-dropdown-item>{{ username }}</el-dropdown-item>
+                <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
             <router-link v-else to="/login">登录</router-link>
           </span>
         </el-col>
       </el-row>
     </el-header>
-    <el-main><Nuxt /></el-main>
+    <el-main style="padding-top: 70px;"><Nuxt /></el-main>
   </el-container>
 </template>
 
@@ -35,7 +42,7 @@ export default {
   },
   computed: {
     isLogin () {
-      return this.$store.state.user.token !== ''
+      return this.$store.state.user.token === ''
     },
     username () {
       return this.$store.state.user.username
@@ -46,6 +53,11 @@ export default {
     },
     isAdmin () {
       return this.$store.state.user.role === 0 || this.$store.state.user.role === 2
+    }
+  },
+  method: {
+    logout () {
+      this.$store.commit('user/changeToken', { token: '' })
     }
   },
   mounted () {

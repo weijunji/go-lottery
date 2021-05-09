@@ -6,10 +6,10 @@
 export default {
   name: 'LoginRequired',
   beforeCreate () {
-    if (this.$store.state.token === '') { this.$router.push('login') }
+    if (this.$store.state.user.token === '') { this.$router.push('login') }
   },
   beforeUpdate () {
-    if (this.$store.state.token === '') { this.$router.push('login') }
+    if (this.$store.state.user.token === '') { this.$router.push('login') }
   }
 }
 </script>
